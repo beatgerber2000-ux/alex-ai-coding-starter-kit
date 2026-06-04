@@ -16,7 +16,7 @@
 | ID | Feature | Status | Prio | Dependencies | Spec | Created |
 |----|---------|--------|------|--------------|------|---------|
 | PROJ-1 | Supabase Infrastructure Setup | Deployed | P0 | None | [Spec](PROJ-1-supabase-infrastructure-setup.md) | 2026-06-04 |
-| PROJ-2 | Authentifizierung (Registrierung, Login, Logout) | Roadmap | P0 | PROJ-1 | — | 2026-06-04 |
+| PROJ-2 | Authentifizierung (Registrierung, Login, Logout) | Planned | P0 | PROJ-1 | [Spec](PROJ-2-authentication.md) | 2026-06-04 |
 | PROJ-3 | Projektverwaltung (anlegen, umbenennen, löschen) | Roadmap | P0 | PROJ-1, PROJ-2 | — | 2026-06-04 |
 | PROJ-4 | Aufgabenverwaltung (CRUD: Titel, Beschreibung, Status) | Roadmap | P0 | PROJ-1, PROJ-2, PROJ-3 | — | 2026-06-04 |
 | PROJ-5 | Aufgabenansicht nach Status | Roadmap | P0 | PROJ-4 | — | 2026-06-04 |
