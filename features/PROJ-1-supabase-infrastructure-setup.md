@@ -1,6 +1,6 @@
 # PROJ-1: Supabase Infrastructure Setup
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-04
 **Last Updated:** 2026-06-04
 
@@ -205,4 +205,30 @@ Aufruf von /api/health/supabase
 - **[Hinweis, kein Bug] EU-Region:** Aus der Projekt-URL nicht ableitbar. Bitte im Supabase-Dashboard (Project Settings → General → Region) bestätigen, dass eine EU-Region gewählt wurde.
 
 ## Deployment
-_To be added by /deploy_
+**Deployed am:** 2026-06-04 · **Plattform:** Vercel
+
+- **Production-URL:** https://alex-ai-coding-starter-kit.vercel.app
+- **Health-Check:** https://alex-ai-coding-starter-kit.vercel.app/api/health/supabase
+- **Git-Tag:** `v1.0.0-PROJ-1`
+
+### Pre-Deployment-Checks
+- ✅ `npm run build` lokal erfolgreich
+- ✅ `npm run lint` grün (ESLint auf Flat-Config migriert; `next lint` in Next 16 entfernt)
+- ✅ QA approved, keine Critical/High-Bugs
+- ✅ Env-Variablen in `.env.local.example` dokumentiert; keine Secrets committet
+- ✅ Security-Header in `next.config.ts` ergänzt und live verifiziert
+- N/A DB-Migrationen (PROJ-1 hat keine Tabellen)
+
+### Production-Verifikation (live)
+- ✅ `/api/health/supabase` → `200 {"status":"connected"}` (Prod-Modus, minimal, kein `message`)
+- ✅ Security-Header gesetzt: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: origin-when-cross-origin`, `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- ✅ Kein Information-Leak: keine Projekt-URL, kein Schlüsselwert, kein `message`-Feld in der Antwort
+- ✅ Supabase-Verbindung in Produktion funktioniert (Env-Variablen in Vercel gesetzt)
+
+### Env-Variablen in Vercel
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (kein Service-Role-Key)
+
+### Offene Punkte / Empfehlungen
+- **EU-Region** im Supabase-Dashboard bestätigen (aus der URL nicht ableitbar).
+- **Error-Tracking** (Sentry o. ä.) und **Performance/Lighthouse-Check** sind noch nicht eingerichtet — empfohlen vor dem ersten echten Endnutzer-Feature (siehe `docs/production/`).
+- Health-Route ist ein temporäres Setup-/QA-Hilfsmittel und kann entfernt werden, sobald echte Features den Verbindungsstatus abdecken.
