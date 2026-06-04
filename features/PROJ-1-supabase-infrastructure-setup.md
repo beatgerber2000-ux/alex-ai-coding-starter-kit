@@ -1,6 +1,6 @@
 # PROJ-1: Supabase Infrastructure Setup
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-06-04
 **Last Updated:** 2026-06-04
 
@@ -124,6 +124,29 @@ Aufruf von /api/health/supabase
 
 - **`@supabase/ssr`** — Server-/Browser-Client-Trennung und Cookie-basierte Sessions für Next.js App Router
 - *(bereits vorhanden: `@supabase/supabase-js`)*
+
+## Implementation Notes (Backend)
+**Implementiert am:** 2026-06-04
+
+**Was gebaut wurde:**
+- `@supabase/ssr` installiert (zusätzlich zum vorhandenen `@supabase/supabase-js`).
+- `src/lib/supabase/client.ts` — Browser-Client (Anon-Key).
+- `src/lib/supabase/server.ts` — Server-Client mit Cookie-Handling (async `cookies()` für Next 16).
+- `src/app/api/health/supabase/route.ts` — Health-Check-Route (`force-dynamic`):
+  - Prüft Env-Variablen, initialisiert den Client (`auth.getSession()`) und verifiziert Erreichbarkeit über den öffentlichen Auth-Health-Endpoint (`/auth/v1/health`) — keine Tabellen, keine Nutzerdaten.
+  - **Development:** konkrete Meldungen (fehlende Variable, Fehlertext). **Production:** nur `{ status: "connected" | "disconnected" }`, keine Details/Stacktraces/Env-Namen.
+  - Gibt niemals Schlüsselwerte oder Nutzerdaten aus (per Test abgesichert).
+- Veralteter Platzhalter `src/lib/supabase.ts` entfernt (wurde nirgends importiert).
+- Integrationstest `src/app/api/health/supabase/route.test.ts` — 5 Tests (connected, fehlende Env-Variable, kein Key-Leak, Supabase nicht erreichbar, Client-Fehler). Alle grün.
+
+**Verifiziert:**
+- `npm test` → 5/5 grün.
+- `npm run build` → erfolgreich; Route korrekt als dynamisch (ƒ) erkannt.
+
+**Abweichungen / Hinweise:**
+- `.env.local.example` enthielt bereits `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY` ohne Service-Role-Key — Vorgabe damit erfüllt; die Datei ist durch Berechtigungseinstellungen schreibgeschützt und wurde nicht verändert.
+- `npm run lint` (`next lint`) ist in Next 16 deprecated und schlägt fehl; der TypeScript-Check des Builds deckt die Typprüfung ab.
+- Echter Verbindungstest gegen ein Supabase-Projekt erfolgt durch QA mit gesetzten `.env.local`-Werten.
 
 ## QA Test Results
 _To be added by /qa_
