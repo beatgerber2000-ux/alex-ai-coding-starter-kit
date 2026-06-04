@@ -1,6 +1,6 @@
 # PROJ-2: Authentifizierung (Registrierung, Login, Logout)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-06-04
 **Last Updated:** 2026-06-04
 
@@ -72,7 +72,7 @@
 - UX: Loading-States und feldbezogene Fehlermeldungen in beiden Formularen.
 
 ## Open Questions
-- [ ] Soll der Logout-Button für den MVP schon final im Header platziert werden oder genügt eine schlichte Variante auf der `/dashboard`-Platzhalterseite? (Klärung spätestens in `/frontend`.)
+- [x] Logout-Button-Platzierung für den MVP. **Entschieden (2026-06-04):** Ein schlichter Logout-Button auf der `/dashboard`-Platzhalterseite genügt. Ein finaler Header bzw. ein Nutzermenü kommt später mit der echten Projekt-/Aufgabenansicht (ab PROJ-3).
 
 ## Decision Log
 
@@ -186,6 +186,30 @@ Formular-Absenden (z. B. Login)
 - `@supabase/ssr`, `@supabase/supabase-js` (PROJ-1)
 - `react-hook-form`, `zod`, `@hookform/resolvers`
 - `sonner` (Toasts, optional für Erfolg/Fehler)
+
+## Implementation Notes (Frontend)
+**Implementiert am:** 2026-06-04
+
+**Was gebaut wurde (UI + Client-Validierung):**
+- `src/lib/auth/validation.ts` — geteilte Zod-Schemas (`loginSchema`, `registerSchema`) für Client **und** (künftig) Server.
+- `src/components/auth/login-form.tsx`, `register-form.tsx` — Client-Komponenten mit react-hook-form + zodResolver, feldbezogene Fehler, Loading-/Disabled-State, generische Fehleranzeige; **Passwortfelder werden bei Fehlern geleert** (E-Mail bleibt).
+- `src/app/login/page.tsx`, `src/app/register/page.tsx` — zentrierte Card-Layouts (shadcn) mit Querverlinkung.
+- `src/app/dashboard/page.tsx` — geschützte Platzhalterseite mit Header, Nutzer-E-Mail und Logout-Button (`<form action={signOut}>`); server-seitiger Page-Guard via `supabase.auth.getUser()` (Defense-in-Depth zusätzlich zur Middleware).
+- `src/app/page.tsx` — Startseite leitet je nach Session weiter (`/dashboard` bzw. `/login`).
+- `src/app/auth/actions.ts` — **Seam zum Backend**: typisierte Server Actions `signIn`/`signUp`/`signOut` mit Fehlerkontrakt (`AuthActionState`), aktuell Platzhalter („noch nicht verbunden"). Echte Supabase-Logik, serverseitige Zod-Prüfung, generische Fehlermeldungen und Redirects kommen in `/backend`.
+
+**Verifiziert:**
+- `npm run build` → erfolgreich (Routen `/`, `/login`, `/register`, `/dashboard`, Health-Route).
+- `npm run lint` → grün.
+- Live-Smoke-Test (Dev): `/` → 307 `/login`; `/login` 200; `/register` 200; `/dashboard` → 307 `/login` (Page-Guard greift).
+
+**Bewusst dem Backend überlassen (`/backend`):**
+- Echte Auth über `@supabase/ssr` (signUp/signInWithPassword/signOut) inkl. Cookie-Handling und serverseitigem Redirect.
+- `src/middleware.ts` (zentraler Routenschutz, Session-Refresh, Matcher-Ausschlüsse für `/login`, `/register`, `/api/health/supabase`, Static/_next).
+- Serverseitige Zod-Validierung + generische Fehlermeldungen (Login & bereits registrierte E-Mail).
+- Supabase-Konfiguration „Confirm email" = AUS.
+
+**Logout-Button:** Entschieden — schlichter Logout-Button auf der `/dashboard`-Platzhalterseite (so umgesetzt). Finaler Header/Nutzermenü erst mit der echten Projekt-/Aufgabenansicht (ab PROJ-3).
 
 ## QA Test Results
 _To be added by /qa_
