@@ -62,12 +62,68 @@
 | E-Mail/Passwort-Auth wird nur vorbereitet, nicht implementiert | Auth-UI/Flows sind eigenständiges Feature PROJ-2 | 2026-06-04 |
 
 ### Technical Decisions
-_To be added by /architecture_
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| `@supabase/ssr` einführen (zusätzlich zu `@supabase/supabase-js`) | Sauberes, Cookie-basiertes Session-Handling für Next.js App Router; macht PROJ-2 (Auth) zuverlässig und vermeidet späteren Umbau | 2026-06-04 |
+| Trennung Browser-Client / Server-Client | Sicherheitsgrenze: sensible Operationen bleiben serverseitig, Browser sieht nur den öffentlichen Anon-Key | 2026-06-04 |
+| Health-Check als Server-Route (`/api/health/supabase`) | Antwort kann serverseitig kontrolliert geformt werden; keine Secrets gelangen ins Frontend | 2026-06-04 |
+| Dev/Prod-Unterscheidung in der Health-Antwort | Hilft beim lokalen Setup, verhindert aber Informationspreisgabe in Produktion | 2026-06-04 |
+| `.env.local.example` als Vorlage, ohne Service-Role-Key | PROJ-1 prüft nur die Grundverbindung — dafür reicht der Anon-Key; weniger Secrets = weniger Risiko. Service-Role-Key wird erst aufgenommen, wenn ein serverseitiges Feature ihn zwingend braucht | 2026-06-04 |
 
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### A) Struktur (Datei-/Bausteinübersicht)
+
+```
+src/lib/supabase/
+├── client.ts        Browser-Client (nutzt nur den öffentlichen Anon-Key)
+└── server.ts        Server-Client (liest/schreibt Auth-Cookies, läuft serverseitig)
+
+src/app/api/health/supabase/
+└── route.ts         Health-Check-Endpoint (serverseitig)
+
+.env.local.example   Vorlage mit allen benötigten Env-Variablen (ohne echte Werte)
+```
+
+- **Browser-Client** wird von UI-Komponenten genutzt (ab PROJ-2). Enthält nur den öffentlichen Anon-Key — unkritisch im Frontend.
+- **Server-Client** läuft nur serverseitig und kümmert sich später um Auth-Sessions über Cookies. Hier landet niemals ein sensibler Schlüssel im Browser.
+- **Health-Route** ist bewusst ein Server-Endpoint, damit der Verbindungstest serverseitig passiert und die Antwort kontrolliert geformt wird.
+
+### B) Datenmodell
+
+PROJ-1 legt **keine** fachlichen Tabellen an. Es geht ausschließlich um die Verbindung. Konfiguriert wird über Environment Variables (nicht im Code):
+
+```
+- NEXT_PUBLIC_SUPABASE_URL      → Adresse des Supabase-Projekts (EU-Region)
+- NEXT_PUBLIC_SUPABASE_ANON_KEY → öffentlicher Schlüssel, darf im Browser sein
+
+Tabellen: keine (projects → PROJ-3, tasks → PROJ-4)
+```
+
+Die Health-Route verwendet **ausschließlich** `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Der Service-Role-Key wird in PROJ-1 nicht verwendet und nicht in `.env.local.example` aufgenommen, solange kein serverseitiges Feature ihn zwingend benötigt.
+
+### C) Health-Check-Verhalten (Dev vs. Prod)
+
+```
+Aufruf von /api/health/supabase
+│
+├── Development:
+│   ├── ✅ { status: "connected", message: "Supabase verbunden" }
+│   └── ❌ { status: "error", message: "Env-Variable NEXT_PUBLIC_... fehlt" }
+│        (konkreter Hinweis, aber NIE der Schlüsselwert)
+│
+└── Production:
+    ├── ✅ { status: "connected" }
+    └── ❌ { status: "disconnected" }
+         (kein Env-Name, keine Details, kein Stacktrace)
+```
+
+### D) Dependencies (zu installieren)
+
+- **`@supabase/ssr`** — Server-/Browser-Client-Trennung und Cookie-basierte Sessions für Next.js App Router
+- *(bereits vorhanden: `@supabase/supabase-js`)*
 
 ## QA Test Results
 _To be added by /qa_
