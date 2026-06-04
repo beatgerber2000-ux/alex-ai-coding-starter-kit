@@ -90,12 +90,102 @@
 | Keine „Angemeldet bleiben"-Option; Session standardmäßig persistent | MVP-Schlankheit; Default genügt | 2026-06-04 |
 
 ### Technical Decisions
-_To be added by /architecture_
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| **Server Actions** für signUp/signIn/signOut | Weniger Boilerplate, kein separater API-Endpoint, native Next-16-Integration; Redirect direkt in der Action | 2026-06-04 |
+| **Middleware** als zentraler Routenschutz | Eine Stelle für Session-Refresh + Redirects; serverseitig (nicht clientseitig umgehbar) | 2026-06-04 |
+| **Zod-Schema geteilt** (Client + Server) | Gleiche Regeln für UX-Feedback und verbindliche Server-Prüfung; kein Doppelpflegen | 2026-06-04 |
+| **react-hook-form + shadcn Form** | Bereits im Stack; saubere feldbezogene Fehlermeldungen + Loading-States | 2026-06-04 |
+| **Keine eigene User-Tabelle** | Supabase `auth.users` deckt Konten/Passwort-Hashing ab; eigene Profiltabellen erst bei Bedarf | 2026-06-04 |
+| **Generische Fehlermeldungen** in der Action (Login + bereits registrierte E-Mail) | Enumeration-Schutz, serverseitig erzwungen | 2026-06-04 |
+| **Passwortfelder bei Fehler leeren, E-Mail behalten** | Keine Passwörter im DOM belassen; gute UX | 2026-06-04 |
+| **Keine neuen Pakete** | `@supabase/ssr`, `react-hook-form`, `zod`, `@hookform/resolvers`, `sonner` bereits vorhanden | 2026-06-04 |
 
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### A) Struktur (Seiten & Bausteine)
+
+```
+src/middleware.ts                  Läuft vor jeder Anfrage:
+                                   - frischt die Supabase-Session auf (Cookie)
+                                   - schützt Routen & leitet je nach Session um
+
+src/app/
+├── page.tsx            (/)        Redirect: eingeloggt → /dashboard, sonst → /login
+├── login/page.tsx      (/login)   Öffentlich — Login-Formular
+├── register/page.tsx   (/register) Öffentlich — Registrierungs-Formular
+└── dashboard/page.tsx  (/dashboard) Geschützt — Platzhalter + Logout-Button
+
+src/app/auth/actions.ts            Server Actions: signUp, signIn, signOut
+                                   (Zod serverseitig, Supabase-Aufruf, Redirect)
+
+src/lib/auth/validation.ts         Zod-Schemas (Login & Registrierung),
+                                   gemeinsam von Client (UX) und Server genutzt
+
+src/components/auth/
+├── login-form.tsx                 Client-Komponente (react-hook-form + Zod)
+└── register-form.tsx              Client-Komponente (react-hook-form + Zod)
+```
+
+Formular-Bausteine (aus vorhandenem shadcn/ui): Card, Form, Input (E-Mail/Passwort/Bestätigung), feldbezogene + generische Fehlermeldung, Submit-Button mit Loading-/Disabled-State, Link zur jeweils anderen Seite.
+
+### B) Datenmodell
+
+PROJ-2 legt **keine eigenen Tabellen** an. Nutzerkonten verwaltet Supabase in `auth.users`:
+
+```
+Pro Nutzer (von Supabase verwaltet):
+- ID (UUID)            → wird später Besitzer von Projekten/Aufgaben (PROJ-3/4)
+- E-Mail
+- Passwort (gehasht, nie im Klartext, nie für uns sichtbar)
+- Zeitstempel
+
+Session: verschlüsseltes Cookie, serverseitig via @supabase/ssr verwaltet
+Supabase-Konfiguration: "Confirm email" = AUS (MVP)
+```
+
+### C) Schutz-Ablauf
+
+```
+Anfrage an eine Route
+        │
+        ▼
+   middleware.ts ── Session aus Cookie lesen/auffrischen
+        │
+        ├─ geschützte Route + keine Session   → Redirect /login
+        ├─ /login oder /register + Session     → Redirect /dashboard
+        └─ sonst → weiter zur Seite
+
+Formular-Absenden (z. B. Login)
+        │  (Client: Zod-Validierung für sofortiges Feedback)
+        ▼
+   Server Action ── Zod-Validierung (verbindlich) ── supabase.auth.* ── Cookie setzen
+        │
+        ├─ Erfolg → redirect('/dashboard')
+        └─ Fehler → generische/feldbezogene Meldung zurück (Passwortfelder leeren)
+```
+
+### D) Sicherheits- & Robustheitsvorgaben (verbindlich für Umsetzung)
+
+**Server Actions:**
+- Keine Passwörter, Session-Tokens oder Auth-Cookies loggen.
+- Passwortfelder bei Fehlern leeren (E-Mail bleibt erhalten).
+- Fehlermeldungen bei Login und bei bereits registrierter E-Mail generisch halten (Enumeration-Schutz).
+
+**Middleware:**
+- Keine Redirect-Endlosschleifen erzeugen.
+- Öffentliche Routen `/login` und `/register` korrekt vom Schutz ausschließen.
+- Health-Route `/api/health/supabase` **nicht** blockieren.
+- Static Assets, Next.js-interne Pfade (`_next/*`, Favicon etc.) und nicht zu schützende API-Routen sauber per Matcher ausschließen.
+
+### E) Abhängigkeiten
+
+**Keine neuen Pakete nötig** — alle vorhanden:
+- `@supabase/ssr`, `@supabase/supabase-js` (PROJ-1)
+- `react-hook-form`, `zod`, `@hookform/resolvers`
+- `sonner` (Toasts, optional für Erfolg/Fehler)
 
 ## QA Test Results
 _To be added by /qa_
