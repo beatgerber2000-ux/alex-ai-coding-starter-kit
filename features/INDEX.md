@@ -13,9 +13,21 @@
 
 ## Features
 
-| ID | Feature | Status | Spec | Created |
-|----|---------|--------|------|---------|
+| ID | Feature | Status | Prio | Dependencies | Spec | Created |
+|----|---------|--------|------|--------------|------|---------|
+| PROJ-1 | Supabase Infrastructure Setup | Roadmap | P0 | None | — | 2026-06-04 |
+| PROJ-2 | Authentifizierung (Registrierung, Login, Logout) | Roadmap | P0 | PROJ-1 | — | 2026-06-04 |
+| PROJ-3 | Projektverwaltung (anlegen, umbenennen, löschen) | Roadmap | P0 | PROJ-1, PROJ-2 | — | 2026-06-04 |
+| PROJ-4 | Aufgabenverwaltung (CRUD: Titel, Beschreibung, Status) | Roadmap | P0 | PROJ-1, PROJ-2, PROJ-3 | — | 2026-06-04 |
+| PROJ-5 | Aufgabenansicht nach Status | Roadmap | P0 | PROJ-4 | — | 2026-06-04 |
+| PROJ-6 | Fälligkeitsdaten & Erinnerungen | Roadmap | P1 | PROJ-4 | — | 2026-06-04 |
+| PROJ-7 | Team-Kollaboration (Einladungen, Rollen) | Roadmap | P1 | PROJ-3 | — | 2026-06-04 |
+| PROJ-8 | Kommentare & Datei-Anhänge | Roadmap | P2 | PROJ-4 | — | 2026-06-04 |
+| PROJ-9 | Suche, Filter & Dashboard | Roadmap | P2 | PROJ-4 | — | 2026-06-04 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-1
+## Recommended Build Order
+PROJ-1 → PROJ-2 → PROJ-3 → PROJ-4 → PROJ-5 (kompletter MVP), danach P1/P2 nach Bedarf.
+
+## Next Available ID: PROJ-10
