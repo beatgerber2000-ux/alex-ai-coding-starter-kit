@@ -1,6 +1,6 @@
 # PROJ-1: Supabase Infrastructure Setup
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-06-04
 **Last Updated:** 2026-06-04
 
@@ -149,7 +149,60 @@ Aufruf von /api/health/supabase
 - Echter Verbindungstest gegen ein Supabase-Projekt erfolgt durch QA mit gesetzten `.env.local`-Werten.
 
 ## QA Test Results
-_To be added by /qa_
+**Getestet am:** 2026-06-04 · **Tester:** QA (Claude) · **Build:** Next 16.1.1, lokal
+
+### Zusammenfassung
+- **Akzeptanzkriterien:** 8 von 8 bestanden
+- **Bugs:** 0 Critical · 0 High · 0 Medium · 1 Low (Tooling, nicht feature-bezogen)
+- **Security-Audit:** keine Schwachstellen gefunden
+- **Production-Ready:** ✅ **JA** (keine Critical/High-Bugs)
+
+### Testumgebung
+- Echte `.env.local` (vom Nutzer angelegt) gegen ein laufendes Supabase-Projekt.
+- URL-Host `isshetqrqciswlrdtoth.supabase.co`; Anon-Key beginnt mit `sb_publi…` (publishable/anon Key, kein Secret) ✅
+- Live getestet in Development (`npm run dev`) und Production (`npm start`), plus zweite Prod-Instanz mit absichtlich ungültiger URL.
+
+### Akzeptanzkriterien
+| # | Kriterium | Methode | Ergebnis |
+|---|-----------|---------|----------|
+| 1 | Env gesetzt → Client initialisiert ohne Fehler | Build + Dev/Prod-Start | ✅ Pass |
+| 2 | Env gesetzt → Health-Route → „Supabase verbunden" | Live (Dev): `{status:"connected", message:"Supabase verbunden"}` | ✅ Pass |
+| 3 | Env fehlt (Dev) → benennt fehlende Variable, ohne Wert | Integrationstest (500, message enthält Variablennamen) | ✅ Pass |
+| 4 | Fehler (Prod) → nur minimaler Status, keine Details/Env-Namen/Stacktraces | Live (Prod, ungültige URL): `503 {status:"disconnected"}` | ✅ Pass |
+| 5 | Env gesetzt, Supabase nicht erreichbar → „Verbindung fehlgeschlagen"/„nicht verbunden" | Live (Prod) + Integrationstest (Dev) | ✅ Pass |
+| 6 | Neueinrichtung → `.env.local.example` dokumentiert alle Variablen, keine Secrets | Review: beide Variablen vorhanden, kein Service-Role-Key | ✅ Pass |
+| 7 | Build → kein Service-Role-Key/sensibler Schlüssel im Client (nur Anon-Key) | Code-Audit: `service_role` nirgends im Code verwendet | ✅ Pass |
+| 8 | Health-Antwort → keine Nutzerdaten, keine Schlüsselwerte | Live + E2E + Integrationstest (kein Key-Leak) | ✅ Pass |
+
+### Edge Cases
+| Fall | Ergebnis |
+|------|----------|
+| Fehlende Env-Variable (Dev) | ✅ Konkrete Meldung mit Variablenname, ohne Wert (Integrationstest) |
+| Fehlende Env / Fehler (Prod) | ✅ Nur `{status:"disconnected"}`, keine Details (live) |
+| Ungültige/unerreichbare URL | ✅ `503`, kein Crash, kontrollierte Antwort (live, Prod) |
+| Versehentlicher Service-Role-Key clientseitig | ✅ Wird nirgends verwendet (Code-Audit) |
+| Health-Route in Prod | ✅ Gibt nur Status aus, keine Secrets/Nutzerdaten (live) |
+
+### Security-Audit (Red Team)
+- **Secret-Leak:** Keine Antwort (Dev/Prod, Erfolg/Fehler) enthält Schlüsselwerte, Env-Namen (Prod) oder Stacktraces. ✅
+- **Service-Role-Key:** in keiner Quelldatei verwendet; nicht in `.env.local.example`. ✅
+- **Anon-Key clientseitig:** vorhanden und korrekt (öffentlicher Key, by design unkritisch). ✅
+- **Information Disclosure:** Dev/Prod-Unterscheidung greift live nachweislich (Prod ohne `message`). ✅
+- **Keine Nutzerdaten/Tabellenzugriffe:** Health-Check nutzt nur Auth-Health-Endpoint, keine Daten. ✅
+
+### Automatisierte Tests
+- **Vitest (Integration):** `src/app/api/health/supabase/route.test.ts` → **5/5 grün**
+- **Playwright (E2E):** `tests/PROJ-1-supabase-infrastructure-setup.spec.ts` → **3/3 grün** (connected, kein Key-Leak, dynamisch konsistent)
+
+### Regression
+- Keine weiteren deployten Features vorhanden; nichts zu regressieren. Gesamtsuite (5 Vitest + 3 Playwright) grün.
+
+### Nicht zutreffend
+- Cross-Browser / Responsive (375/768/1440): **N/A** — PROJ-1 ist ein Infrastruktur-/API-Feature ohne UI.
+
+### Bugs / Offene Punkte
+- **[Low] Tooling:** `npm run lint` (`next lint`) ist in Next 16 deprecated und schlägt mit „Invalid project directory: …/lint" fehl. Betrifft das Template-Tooling, nicht PROJ-1. Empfehlung: in `/deploy` auf ESLint-Flat-Config / `eslint .` umstellen.
+- **[Hinweis, kein Bug] EU-Region:** Aus der Projekt-URL nicht ableitbar. Bitte im Supabase-Dashboard (Project Settings → General → Region) bestätigen, dass eine EU-Region gewählt wurde.
 
 ## Deployment
 _To be added by /deploy_
