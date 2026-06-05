@@ -14,7 +14,7 @@ Eine schlanke Projektmanagement-App für Solo-Gründer und kleine Teams, mit der
 |-----------|---------|--------|
 | P0 (MVP) | Supabase Infrastructure Setup | Planned |
 | P0 (MVP) | Authentifizierung (Registrierung, Login, Logout) | Planned |
-| P0 (MVP) | Projektverwaltung (anlegen, umbenennen, löschen) | Roadmap |
+| P0 (MVP) | Projektverwaltung (anlegen, umbenennen, löschen) | Planned |
 | P0 (MVP) | Aufgabenverwaltung (CRUD: Titel, Beschreibung, Status) | Roadmap |
 | P0 (MVP) | Aufgabenansicht nach Status (To Do → In Arbeit → Erledigt) | Roadmap |
 | P1 | Fälligkeitsdaten & Erinnerungen | Geplant |
