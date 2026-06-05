@@ -1,8 +1,8 @@
 # PROJ-2: Authentifizierung (Registrierung, Login, Logout)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-06-04
-**Last Updated:** 2026-06-04
+**Last Updated:** 2026-06-05
 
 ## Dependencies
 - Requires: **PROJ-1** (Supabase Infrastructure Setup) — Supabase-Client, Server-Client und Cookie-Handling sind die Grundlage für Auth-Sessions.
@@ -244,7 +244,74 @@ Formular-Absenden (z. B. Login)
 - In Supabase muss **„Confirm email" deaktiviert** sein (Authentication → Providers/Email bzw. Sign In/Up Settings). Andernfalls liefert `signUp` keine Session und die Registrierung schlägt mit der neutralen Meldung fehl. (QA verifiziert den echten End-to-End-Flow.)
 
 ## QA Test Results
-_To be added by /qa_
+**Getestet am:** 2026-06-05 · **Tester:** QA (Claude) · **Build:** Next 16.1.1, lokal · Supabase mit „Confirm email" = AUS
+
+### Zusammenfassung
+- **Akzeptanzkriterien:** 16 von 16 bestanden
+- **Bugs:** 0 Critical · 0 High · 0 Medium · 2 Low (Tooling/Prozess)
+- **Security-Audit:** keine Schwachstellen gefunden
+- **Production-Ready:** ✅ **JA** (keine Critical/High-Bugs)
+
+### Testumgebung
+- Live gegen echtes Supabase-Projekt (EU), reale Registrierung/Login.
+- E2E über Playwright (Chromium), Dev-Server via Playwright webServer.
+
+### Akzeptanzkriterien (E2E + Unit)
+| Bereich | Kriterien | Ergebnis |
+|---------|-----------|----------|
+| Registrierung: gültig → eingeloggt → /dashboard | AC | ✅ E2E |
+| Registrierung: leeres Formular → Feldfehler | AC | ✅ E2E |
+| Registrierung: ungültiges E-Mail-Format | AC | ✅ E2E |
+| Registrierung: Passwort < 8 Zeichen | AC | ✅ E2E |
+| Registrierung: Passwort-Bestätigung weicht ab | AC | ✅ E2E |
+| Registrierung: bereits registrierte E-Mail → neutrale Meldung | AC | ✅ E2E |
+| Login: korrekt → /dashboard | AC | ✅ E2E |
+| Login: falsche Kombination → generische Meldung | AC | ✅ E2E |
+| Login: Pflichtfeld/Format-Fehler | AC | ✅ Unit (Schema) |
+| Routenschutz: nicht eingeloggt + /dashboard → /login | AC | ✅ E2E |
+| Routenschutz: eingeloggt + /login → /dashboard | AC | ✅ E2E |
+| Startseite / → Session-abhängige Weiterleitung | AC | ✅ E2E/Smoke |
+| Session abgelaufen/ungültig → /login | AC | ✅ (getUser-Validierung, Routenschutz) |
+| Logout → Session beendet → /login | AC | ✅ E2E |
+| Nach Logout /dashboard nicht erreichbar | AC | ✅ E2E |
+| Session bleibt über Reload/Login erhalten | AC | ✅ E2E |
+
+### Edge Cases
+| Fall | Ergebnis |
+|------|----------|
+| Leeres Formular | ✅ Feldbezogene Fehler |
+| Ungültiges E-Mail-Format | ✅ Formatfehler |
+| Passwort/Bestätigung weichen ab | ✅ Fehler am Bestätigungsfeld |
+| Bereits registrierte E-Mail | ✅ Neutrale Meldung, kein Enumeration-Leak |
+| Falsche Login-Kombination | ✅ Generische Meldung |
+| Manueller Zugriff auf geschützte URL ohne Session | ✅ Redirect /login (Middleware) |
+| Keine Redirect-Endlosschleifen | ✅ Verifiziert (Smoke + E2E) |
+| /api/health/supabase nicht blockiert | ✅ Verifiziert |
+
+### Security-Audit (Red Team)
+- **Auth-Bypass:** /dashboard ohne Session → /login; Schutz serverseitig in Middleware **und** Page-Guard. ✅
+- **Token-Validierung:** überall `getUser()` (validiert serverseitig) statt spoofbarem `getSession()`. ✅
+- **User-Enumeration:** Login („E-Mail oder Passwort falsch.") und Registrierung (neutrale Meldung) konsistent generisch. ✅
+- **Injection/XSS:** E-Mail-Format wird per Zod erzwungen; Fehlermeldungen sind statische Strings (kein Echo von Eingaben); React escapt Ausgaben. Kein reflektiertes XSS gefunden. ✅
+- **Logging:** keine Passwörter/Tokens/Cookies im Auth-Code geloggt. ✅
+- **Secrets:** kein Service-Role-Key im Code; nur öffentlicher Anon-Key clientseitig. ✅
+- **Session-Cookies:** via `@supabase/ssr`-Defaults (httpOnly Auth-Cookies); funktionierende Persistenz per E2E bestätigt. *(httpOnly-Flag über Framework-Default, nicht zusätzlich manuell inspiziert.)*
+
+### Automatisierte Tests
+- **Vitest:** 21/21 grün (Health 5, Validierungs-Schemas 9, Server Actions 7).
+- **Playwright E2E:** 13/13 grün (PROJ-1: 3, PROJ-2: 10).
+
+### Regression
+- PROJ-1 (Deployed): Health-Route E2E weiterhin grün, keine Regression.
+
+### Nicht zutreffend / Limitierungen
+- **Cross-Browser:** nur Chromium getestet (Firefox/WebKit-Binaries nicht installiert). Auth-UI nutzt Standard-shadcn/ui — geringes Risiko, aber nicht verifiziert.
+- **Responsive (375/768/1440):** nicht explizit pro Breakpoint getestet; Layout ist eine zentrierte Card (unkritisch).
+
+### Bugs / Offene Punkte
+- **[Low] Tooling:** Next 16 markiert die `middleware.ts`-Konvention als deprecated (Empfehlung: `proxy.ts`). Funktioniert aktuell einwandfrei (Build registriert „ƒ Proxy (Middleware)"). Migration kann später erfolgen.
+- **[Low] Testdaten:** Die E2E-Registrierungstests legen reale Supabase-Nutzer an (`qa-*@example.com`). Für ein Übungsprojekt akzeptabel; Empfehlung: separates Test-Projekt oder gelegentliches Aufrämen der Test-Accounts.
+- **[Hinweis] Voraussetzung:** „Confirm email" muss in Supabase deaktiviert bleiben, sonst schlägt die Registrierung (neutral) fehl.
 
 ## Deployment
 _To be added by /deploy_
