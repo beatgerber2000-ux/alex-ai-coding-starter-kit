@@ -8,6 +8,9 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // Nur co-locatete Unit-/Integrationstests unter src/. Playwright-E2E-Tests
+    // liegen in tests/ und werden über `npm run test:e2e` ausgeführt.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
   resolve: {
     alias: {

@@ -211,6 +211,38 @@ Formular-Absenden (z. B. Login)
 
 **Logout-Button:** Entschieden — schlichter Logout-Button auf der `/dashboard`-Platzhalterseite (so umgesetzt). Finaler Header/Nutzermenü erst mit der echten Projekt-/Aufgabenansicht (ab PROJ-3).
 
+## Implementation Notes (Backend)
+**Implementiert am:** 2026-06-05
+
+**Was gebaut wurde (echte Auth-Logik):**
+- `src/app/auth/actions.ts` — Server Actions mit echter Supabase-Auth über `@supabase/ssr`:
+  - `signIn`: serverseitige Zod-Prüfung → `signInWithPassword` → bei Erfolg `revalidatePath` + `redirect('/dashboard')`; bei Fehler generische Meldung „E-Mail oder Passwort falsch." (kein Enumeration-Leak).
+  - `signUp`: Zod-Prüfung → `signUp` → Erfolg nur bei vorhandener Session (Confirm-Email AUS) → `/dashboard`; bei Fehler/ohne Session neutrale Meldung (deckt „bereits registriert" generisch ab).
+  - `signOut`: `signOut` → `revalidatePath` + `redirect('/login')`.
+  - Keine Passwörter/Tokens/Cookies werden geloggt.
+- `src/middleware.ts` — zentraler Routenschutz + Session-Refresh:
+  - Nicht eingeloggt + geschützte Route → `/login`; eingeloggt + `/login`/`/register` → `/dashboard`.
+  - API-Routen (inkl. `/api/health/supabase`) werden nicht umgeleitet, nur Session refreshed.
+  - Aufgefrischte Session-Cookies werden bei Redirects erhalten (kein Session-Verlust).
+  - Matcher schließt `_next/static`, `_next/image`, `favicon.ico` und Bild-Assets aus.
+  - Keine Redirect-Endlosschleifen (verifiziert).
+
+**Tests:**
+- `src/lib/auth/validation.test.ts` — 9 Tests (Login-/Register-Schema, Pflichtfelder, Format, Mindestlänge, Passwort-Match).
+- `src/app/auth/actions.test.ts` — 7 Tests (signIn Erfolg/falsch/ungültig, signUp Erfolg/bereits-registriert/keine-Session/Passwort-Mismatch, signOut), mit gemocktem Supabase-Client, `redirect` und `revalidatePath`.
+
+**Verifiziert:**
+- `npm test` → **21/21 grün** (Health-Route 5, Validierung 9, Actions 7).
+- `npm run build` → erfolgreich; Middleware registriert (`ƒ Proxy (Middleware)`).
+- `npm run lint` → grün.
+- Live-Smoke-Test Middleware: `/`→`/login`, `/login` 200, `/register` 200, `/dashboard`→`/login`, `/api/health/supabase` 200 (nicht blockiert), keine Endlosschleifen.
+
+**Config-Fix (Tooling):**
+- `vitest.config.ts` — `include: ['src/**/*.{test,spec}.{ts,tsx}']` ergänzt, damit Vitest nur co-locatete Unit-/Integrationstests sammelt und die Playwright-E2E-Tests in `tests/` (über `npm run test:e2e`) nicht mehr fälschlich einliest.
+
+**WICHTIG — manueller Schritt vor QA/Nutzung:**
+- In Supabase muss **„Confirm email" deaktiviert** sein (Authentication → Providers/Email bzw. Sign In/Up Settings). Andernfalls liefert `signUp` keine Session und die Registrierung schlägt mit der neutralen Meldung fehl. (QA verifiziert den echten End-to-End-Flow.)
+
 ## QA Test Results
 _To be added by /qa_
 

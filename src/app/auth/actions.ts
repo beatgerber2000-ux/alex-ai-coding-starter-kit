@@ -1,40 +1,81 @@
 'use server'
 
-import type { LoginInput, RegisterInput } from '@/lib/auth/validation'
+import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
-// Server Actions für PROJ-2 — SEAM zum Backend.
+import { createClient } from '@/lib/supabase/server'
+import {
+  loginSchema,
+  registerSchema,
+  type LoginInput,
+  type RegisterInput,
+} from '@/lib/auth/validation'
+
+// Server Actions für PROJ-2 (Auth).
 //
-// Diese Frontend-Phase liefert die typisierten Signaturen und das Fehler-/
-// Erfolgskontrakt. Die echte Supabase-Auth-Logik (signUp/signInWithPassword/
-// signOut über @supabase/ssr), das Cookie-Handling und der serverseitige
-// Redirect nach /dashboard werden in `/backend` ergänzt.
-//
-// Verbindliche Vorgaben für die Backend-Umsetzung (siehe Spec, Tech Design D):
-// - Zod-Validierung serverseitig (loginSchema / registerSchema) als verbindliche Prüfung.
+// Sicherheitsvorgaben (siehe Spec, Tech Design D):
+// - Validierung serverseitig (verbindlich), zusätzlich zur Client-Validierung.
 // - Keine Passwörter, Session-Tokens oder Auth-Cookies loggen.
-// - Generische Fehlermeldungen bei Login und bereits registrierter E-Mail.
-// - Bei Erfolg: redirect('/dashboard').
+// - Generische Fehlermeldungen bei Login und bereits registrierter E-Mail
+//   (Schutz vor User-Enumeration).
+// - Cookie-/Session-Handling über @supabase/ssr (server.ts).
 
 export type AuthActionState = {
   error?: string
-  fieldErrors?: Partial<Record<string, string>>
 }
 
-const NOT_WIRED: AuthActionState = {
-  error: 'Anmeldedienst ist noch nicht verbunden. (Wird in /backend fertiggestellt.)',
+const LOGIN_ERROR = 'E-Mail oder Passwort falsch.'
+const REGISTER_ERROR =
+  'Registrierung konnte nicht abgeschlossen werden. Bitte versuche es mit einer anderen E-Mail oder melde dich an.'
+
+export async function signIn(values: LoginInput): Promise<AuthActionState> {
+  const parsed = loginSchema.safeParse(values)
+  if (!parsed.success) {
+    return { error: LOGIN_ERROR }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.signInWithPassword({
+    email: parsed.data.email,
+    password: parsed.data.password,
+  })
+
+  if (error) {
+    // Bewusst generisch — kein Hinweis, ob die E-Mail existiert.
+    return { error: LOGIN_ERROR }
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/dashboard')
 }
 
-export async function signIn(_values: LoginInput): Promise<AuthActionState> {
-  // TODO(/backend): Zod-Prüfung + supabase.auth.signInWithPassword + redirect('/dashboard')
-  return NOT_WIRED
-}
+export async function signUp(values: RegisterInput): Promise<AuthActionState> {
+  const parsed = registerSchema.safeParse(values)
+  if (!parsed.success) {
+    return { error: REGISTER_ERROR }
+  }
 
-export async function signUp(_values: RegisterInput): Promise<AuthActionState> {
-  // TODO(/backend): Zod-Prüfung + supabase.auth.signUp + redirect('/dashboard')
-  // Bereits registrierte E-Mail → neutrale Meldung (kein Enumeration-Leak).
-  return NOT_WIRED
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signUp({
+    email: parsed.data.email,
+    password: parsed.data.password,
+  })
+
+  // Bei deaktivierter E-Mail-Bestätigung liefert ein erfolgreiches Sign-up eine
+  // Session. Fehlt sie (Fehler oder bereits registrierte E-Mail), antworten wir
+  // neutral — ohne offenzulegen, ob das Konto existiert.
+  if (error || !data.session) {
+    return { error: REGISTER_ERROR }
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/dashboard')
 }
 
 export async function signOut(): Promise<void> {
-  // TODO(/backend): supabase.auth.signOut + redirect('/login')
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+
+  revalidatePath('/', 'layout')
+  redirect('/login')
 }
