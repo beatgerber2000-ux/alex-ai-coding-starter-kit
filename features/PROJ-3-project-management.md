@@ -118,12 +118,108 @@ Nach Login und Registrierung (PROJ-2) wird das Redirect-Ziel von `/dashboard` au
 | Sortierung `created_at DESC` | Neueste zuerst, deterministisch | 2026-06-05 |
 
 ### Technical Decisions
-_To be added by /architecture_
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| **Server Actions** für createProject/renameProject/deleteProject | Konsistent mit PROJ-2-Auth-Pattern; kein separater API-Endpoint; Redirect/revalidate direkt in der Action | 2026-06-05 |
+| **`user_id` ausschließlich serverseitig** aus `auth.uid()` | Client sendet nur den Namen — niemals die user_id; verhindert Manipulation | 2026-06-05 |
+| **RLS für alle 4 Operationen** (SELECT/INSERT/UPDATE/DELETE) | Defense-in-Depth: selbst wenn eine Server Action fehlerhaft wäre, blockiert die DB | 2026-06-05 |
+| **Eigentumscheck in Actions** (Rename/Delete) | Zusätzliche serverseitige Prüfung vor der DB-Mutation; keine Projekt-IDs oder Nutzerdaten in Fehlermeldungen | 2026-06-05 |
+| **Zod-Schema geteilt** (Client + Server) | Gleiche Trim/Längen-Regel für sofortiges UX-Feedback und verbindliche Server-Prüfung | 2026-06-05 |
+| **shadcn `Dialog`** für Anlegen/Umbenennen, **`AlertDialog`** für Löschen | AlertDialog ist semantisch korrekt für destruktive Aktionen; alle Komponenten bereits vorhanden | 2026-06-05 |
+| **`revalidatePath('/projects')`** nach jeder Mutation | Projektliste aktualisiert sich ohne manuelles Client-State-Management | 2026-06-05 |
+| **Routing-Änderung**: Login/Register → `/projects`, `/dashboard` → Redirect | Klare Trennung Auth-Platzhalter vs. App; `/dashboard` bleibt bestehen um bestehende Sessions nicht zu brechen | 2026-06-05 |
+| **Keine neuen Pakete** | Alle benötigten Pakete bereits im Stack (supabase/ssr, zod, react-hook-form, shadcn) | 2026-06-05 |
 
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### A) Struktur (Seiten & Bausteine)
+
+```
+src/app/projects/
+└── page.tsx                      Geschützte Hauptseite (Page-Guard via getUser)
+
+src/app/dashboard/page.tsx        Geändert: leitet nun auf /projects weiter
+src/app/auth/actions.ts           Geändert: Login/Register-Redirect → /projects
+src/app/projects/actions.ts       Server Actions: createProject, renameProject,
+                                  deleteProject (Zod + user_id aus Session,
+                                  Eigentumscheck, keine Daten in Fehlermeldungen)
+
+src/lib/projects/validation.ts    Zod-Schema (Name: Pflicht, max 100 Zeichen,
+                                  getrimmt), geteilt Client + Server
+
+src/components/projects/
+├── project-list.tsx              Zeigt alle Projekte (sorted created_at DESC)
+│                                 + Leerstate-Anzeige
+├── project-card.tsx              Einzelprojekt: Name, Stift-Icon, Löschen-Icon
+├── create-project-dialog.tsx     Dialog mit leerem Textfeld → createProject
+├── rename-project-dialog.tsx     Dialog mit vorausgefülltem Name → renameProject
+└── delete-project-dialog.tsx     AlertDialog mit Cascade-Hinweis → deleteProject
+```
+
+Seitenaufbau `/projects`:
+```
+/projects (Server Component, Page-Guard)
+├── Header: „Meine Projekte" + Button „Neues Projekt"
+├── ProjectList
+│   ├── ProjectCard (je Projekt)
+│   │   ├── Projektname
+│   │   ├── Stift-Icon → RenameProjectDialog
+│   │   └── Löschen-Icon → DeleteProjectDialog
+│   └── Leerstate (wenn keine Projekte vorhanden)
+└── CreateProjectDialog
+```
+
+### B) Datenmodell
+
+```
+Tabelle: projects (in Supabase anzulegen)
+- id            UUID, Primärschlüssel, auto-generiert
+- user_id       UUID, FK → auth.users — wird NIEMALS vom Client übergeben;
+                serverseitig aus auth.uid() gesetzt
+- name          Text, Pflicht, 1–100 Zeichen (getrimmt, serverseitig validiert)
+- created_at    Zeitstempel, Sortiergrundlage (DESC)
+- updated_at    Zeitstempel, für spätere Nachvollziehbarkeit
+
+Row Level Security (alle 4 Operationen explizit abgesichert):
+  SELECT  → auth.uid() = user_id
+  INSERT  → auth.uid() = user_id
+  UPDATE  → auth.uid() = user_id
+  DELETE  → auth.uid() = user_id
+
+Index auf user_id (Performance bei SELECT/UPDATE/DELETE).
+
+Vorbereitung PROJ-4: tasks.project_id → projects.id ON DELETE CASCADE
+(kommt mit PROJ-4; im Löschen-Dialog-Text bereits berücksichtigt).
+```
+
+### C) Sicherheitsvorgaben (verbindlich für Umsetzung)
+
+- **`user_id` serverseitig**: Server Actions lesen `user_id` ausschließlich aus der Supabase-Session (`auth.uid()`). Der Client übergibt nur den Projektnamen.
+- **Eigentumscheck**: Bei Rename und Delete prüft die Server Action vor der Mutation, dass das Projekt der eingeloggten Session gehört.
+- **Keine Datenlecks**: Keine Projekt-IDs, user_ids oder interne Details in Fehlermeldungen oder Logs.
+- **Serverseitige Validierung**: Projektname wird in der Server Action getrimmt und per Zod validiert — unabhängig von der Client-Validierung.
+- **RLS als zweite Verteidigungslinie**: Selbst bei fehlerhafter Server-Logik blockiert die DB unberechtigte Zugriffe.
+
+### D) Routing-Änderungen
+
+```
+Vorher (PROJ-2):                Nachher (PROJ-3):
+  Login/Register → /dashboard     Login/Register → /projects
+  /dashboard (Platzhalter)        /dashboard → Redirect auf /projects
+```
+
+Middleware (`src/middleware.ts`) bleibt unverändert — `/projects` ist automatisch geschützt.
+
+### E) Abhängigkeiten
+
+**Keine neuen Pakete** — alle vorhanden:
+- `@supabase/ssr`, `@supabase/supabase-js`, `zod`, `react-hook-form`, `@hookform/resolvers`
+- shadcn `Dialog`, `AlertDialog`, `Input`, `Button`, `Card` (alle installiert)
+
+**Manueller Schritt in Supabase (vor `/backend`):**
+Tabelle `projects` + RLS-Policies + Index auf `user_id` über den Supabase SQL-Editor anlegen (wird in `/backend` vollständig dokumentiert).
 
 ## QA Test Results
 _To be added by /qa_
