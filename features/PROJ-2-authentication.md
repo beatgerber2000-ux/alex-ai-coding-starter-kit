@@ -1,6 +1,6 @@
 # PROJ-2: Authentifizierung (Registrierung, Login, Logout)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-04
 **Last Updated:** 2026-06-05
 
@@ -314,4 +314,31 @@ Formular-Absenden (z. B. Login)
 - **[Hinweis] Voraussetzung:** „Confirm email" muss in Supabase deaktiviert bleiben, sonst schlägt die Registrierung (neutral) fehl.
 
 ## Deployment
-_To be added by /deploy_
+**Deployed am:** 2026-06-05 · **Plattform:** Vercel (Auto-Deploy via GitHub-Push)
+
+- **Production-URL:** https://alex-ai-coding-starter-kit.vercel.app
+- **Login:** `/login` · **Registrierung:** `/register` · **Geschützt:** `/dashboard`
+- **Git-Tag:** `v1.1.0-PROJ-2`
+
+### Pre-Deployment-Checks
+- ✅ `npm run build` lokal erfolgreich (Middleware registriert)
+- ✅ `npm run lint` grün
+- ✅ QA approved, keine Critical/High-Bugs
+- ✅ Env-Variablen in Vercel gesetzt (aus PROJ-1, unverändert); keine Secrets committet
+- N/A DB-Migrationen (Supabase verwaltet `auth.users`)
+
+### Production-Verifikation (live, echter Browser)
+- ✅ Routing/Middleware: `/`→`/login`, `/login` 200, `/register` 200, `/dashboard`→`/login`, `/api/health/supabase` 200 (nicht blockiert)
+- ✅ Registrierung → sofort eingeloggt → `/dashboard` („Willkommen" sichtbar)
+- ✅ Logout → `/login`; `/dashboard` danach gesperrt
+- ✅ Login → `/dashboard`; Session bleibt über Reload erhalten
+- ✅ Security-Header auf `/login` gesetzt (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS)
+
+### Voraussetzungen (bestätigt)
+- Supabase „Confirm email" = AUS.
+- Supabase-Env-Variablen in Vercel gesetzt (nur Anon-Key, kein Service-Role-Key).
+
+### Offene Punkte / Empfehlungen
+- **[Low]** `middleware.ts` → später auf `proxy.ts` migrieren (Next-16-Deprecation; funktioniert aktuell).
+- **[Low]** Reale QA-Test-Nutzer (`qa-*@example.com`) in Supabase ggf. aufräumen.
+- Error-Tracking (Sentry) + Lighthouse-Check weiterhin empfohlen vor breiterem Rollout (siehe `docs/production/`).
