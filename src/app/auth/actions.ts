@@ -46,7 +46,7 @@ export async function signIn(values: LoginInput): Promise<AuthActionState> {
   }
 
   revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect('/projects')
 }
 
 export async function signUp(values: RegisterInput): Promise<AuthActionState> {
@@ -69,7 +69,7 @@ export async function signUp(values: RegisterInput): Promise<AuthActionState> {
   }
 
   revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect('/projects')
 }
 
 export async function signOut(): Promise<void> {

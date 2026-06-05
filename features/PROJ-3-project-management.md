@@ -1,6 +1,6 @@
 # PROJ-3: Projektverwaltung (anlegen, umbenennen, löschen)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-06-05
 **Last Updated:** 2026-06-05
 
@@ -220,6 +220,32 @@ Middleware (`src/middleware.ts`) bleibt unverändert — `/projects` ist automat
 
 **Manueller Schritt in Supabase (vor `/backend`):**
 Tabelle `projects` + RLS-Policies + Index auf `user_id` über den Supabase SQL-Editor anlegen (wird in `/backend` vollständig dokumentiert).
+
+## Implementation Notes (Frontend)
+**Implementiert am:** 2026-06-05
+
+**Was gebaut wurde (UI + Client-Validierung):**
+- `src/lib/projects/validation.ts` — geteiltes Zod-Schema (`projectNameSchema`: trim, min 1, max 100)
+- `src/components/projects/create-project-dialog.tsx` — Dialog (shadcn), react-hook-form + Zod, Loading/Fehler-State
+- `src/components/projects/rename-project-dialog.tsx` — Dialog mit vorausgefülltem Namen, useEffect für Reset (kein setState in Effect), Loading/Fehler-State
+- `src/components/projects/delete-project-dialog.tsx` — AlertDialog (shadcn, destruktive Aktion), Cascade-Hinweis, Loading/Fehler-State
+- `src/components/projects/project-card.tsx` — Karte mit Stift/Trash-Icons (hover-visible), öffnet Rename/Delete-Dialog
+- `src/components/projects/project-list.tsx` — Liste + Leerstate mit „Erstes Projekt anlegen"-Button
+- `src/app/projects/page.tsx` — geschützte Hauptseite (Page-Guard via getUser), Header mit Logout; Projektliste als Platzhalter (leeres Array bis /backend)
+- `src/app/projects/[projectId]/page.tsx` — Platzhalterseite für PROJ-4/5
+- `src/app/projects/actions.ts` — typisierter Server-Action-Seam (createProject/renameProject/deleteProject, Platzhalter-Implementierung für /backend)
+- `src/app/dashboard/page.tsx` → Redirect auf `/projects`
+- `src/app/auth/actions.ts` → Redirects nach Login/Register von `/dashboard` auf `/projects` geändert
+
+**Verifiziert:**
+- `npm run build` → grün, alle Routen erzeugt
+- `npm run lint` → grün
+- Smoke-Test: `/projects` und `/dashboard` → 307 `/login` ohne Session; kein Redirect-Loop
+
+**Bewusst dem Backend überlassen (/backend):**
+- Echte Supabase-DB: Tabelle `projects` anlegen + RLS-Policies + Index auf user_id
+- createProject/renameProject/deleteProject: Supabase-Logik, user_id aus Session, Eigentumscheck, revalidatePath
+- Projekte laden in `projects/page.tsx` (aktuell leeres Array-Platzhalter)
 
 ## QA Test Results
 _To be added by /qa_
