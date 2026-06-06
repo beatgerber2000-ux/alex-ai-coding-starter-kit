@@ -1,6 +1,6 @@
 # PROJ-3: Projektverwaltung (anlegen, umbenennen, löschen)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-06-05
 **Last Updated:** 2026-06-05
 
@@ -272,7 +272,63 @@ Tabelle `projects` + RLS-Policies + Index auf `user_id` über den Supabase SQL-E
 - `npm run lint` → grün
 
 ## QA Test Results
-_To be added by /qa_
+**Getestet am:** 2026-06-06 · **Tester:** QA (Claude) · **Build:** Next 16.1.1, lokal · Echte Supabase-Verbindung
+
+### Zusammenfassung
+- **Akzeptanzkriterien:** 18 von 18 bestanden
+- **Bugs:** 0 Critical · 0 High · 0 Medium · 2 Low (Tooling/Flakiness, kein Produktions-Impact)
+- **Regression (PROJ-1/2):** 0 neue Fehler, PROJ-2-E2E-Tests auf neues Routing aktualisiert
+- **Security-Audit:** keine Schwachstellen gefunden
+- **Production-Ready:** ✅ **JA** (keine Critical/High-Bugs)
+
+### Testumgebung
+- Live gegen echtes Supabase-Projekt (EU), echte Registrierungen und Projektmutationen.
+- E2E über Playwright (Chromium), Dev-Server via Playwright webServer.
+- `--retries=1` lokal wegen Supabase Free Tier Timing (alle Tests bestehen auf Retry).
+
+### Akzeptanzkriterien
+
+| Kriterium | Methode | Ergebnis |
+|-----------|---------|----------|
+| Nicht eingeloggt → /projects → /login | E2E | ✅ |
+| /dashboard → /projects (eingeloggt) | E2E | ✅ |
+| Leerstate erscheint wenn keine Projekte | E2E | ✅ |
+| Dialog öffnet sich bei „Neues Projekt" / „Erstes Projekt anlegen" | E2E | ✅ |
+| Abbrechen schließt Dialog ohne Änderung | E2E | ✅ |
+| Gültiger Name → Projekt erscheint in Liste | E2E | ✅ |
+| Leerer Name → Fehlermeldung, kein Speichern | E2E | ✅ |
+| Name > 100 Zeichen → Fehlermeldung | E2E | ✅ |
+| Stift-Icon → Dialog mit vorausgefülltem Namen | E2E | ✅ |
+| Gültiger neuer Name → Projektname aktualisiert | E2E | ✅ |
+| Leeres Umbenennen-Feld → Fehlermeldung | Unit (Zod) | ✅ |
+| Umbenennen-Abbrechen → kein Speichern | E2E | ✅ |
+| Löschen-Icon → Bestätigungsdialog mit Cascade-Hinweis | E2E | ✅ |
+| Löschen bestätigen → Projekt entfernt | E2E | ✅ |
+| Löschen-Abbrechen → Projekt bleibt | E2E | ✅ |
+| Eigene Projekte sortiert nach created_at DESC | Live (manuell) | ✅ |
+| API-Fehler → Fehlermeldung, Eingabe bleibt | Unit (mock) | ✅ |
+| Nutzer A sieht nicht Projekte von Nutzer B (RLS) | Security-Audit | ✅ |
+
+### Security-Audit (Red Team)
+- **user_id-Manipulation:** user_id nie vom Client übergeben; Server Action liest immer aus `auth.uid()`. ✅
+- **Eigentumscheck:** renameProject/deleteProject prüfen via `.eq('user_id', userId)` — fremde Projekte können nicht verändert werden. ✅
+- **RLS Defense-in-Depth:** Alle 4 Operationen durch RLS-Policies abgesichert (SELECT/INSERT/UPDATE/DELETE). ✅
+- **Keine Datenlecks:** Fehlermeldungen enthalten keine Projekt-IDs, user_ids oder interne Details. ✅
+- **Routenschutz:** /projects ohne Session → /login (Middleware + Page-Guard). ✅
+- **XSS:** Projektnamen werden von React automatisch escaped. Kein reflektiertes XSS gefunden. ✅
+
+### Automatisierte Tests
+- **Vitest:** 41/41 grün (PROJ-1: 5, PROJ-2: 16, PROJ-3: 19, Auth-Redirect: 1 update)
+- **Playwright E2E:** 24/24 bestehen (13 PROJ-1/2, 11 PROJ-3); 6 flaky → pass auf Retry (Supabase Free Tier Timing)
+
+### Regression
+- PROJ-2-E2E-Tests auf neues Routing (`/projects` statt `/dashboard`) aktualisiert — keine Regressionsfehler.
+- PROJ-1 Health-Route weiterhin unverändert funktional.
+
+### Bugs / Offene Punkte
+- **[Low] Middleware-Deprecation:** `middleware.ts` → `proxy.ts` (Next 16, funktioniert aktuell einwandfrei).
+- **[Low] E2E-Flakiness:** Supabase Free Tier hat gelegentlich Timing-Timeouts unter sequenzieller Last (~30 Tests/Lauf). Lösung: `retries: 1` in `playwright.config.ts` gesetzt. Kein Produktions-Impact.
+- **[Hinweis] Test-Nutzer und -Projekte:** E2E legt echte Supabase-Einträge an (`qa-*@example.com`, `qa-proj-*`). Periodisches Aufräumen empfohlen.
 
 ## Deployment
 _To be added by /deploy_

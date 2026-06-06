@@ -4,6 +4,9 @@ import { test, expect, type Page } from '@playwright/test'
 // Läuft gegen den Dev-Server (Playwright webServer) mit echter Supabase-Verbindung.
 // Voraussetzung: Supabase "Confirm email" ist deaktiviert.
 //
+// Routing-Hinweis (PROJ-3): Login/Register leiten jetzt auf /projects weiter
+// (war: /dashboard). /dashboard selbst leitet auf /projects weiter.
+//
 // Hinweis: Registrierungstests legen echte Test-Nutzer in Supabase an
 // (eindeutige qa-*@example.com-Adressen). Für ein Übungsprojekt akzeptabel.
 
@@ -39,41 +42,41 @@ test.describe('PROJ-2 Authentifizierung', () => {
     await expect(page).toHaveURL(/\/login$/)
   })
 
-  test('Angenommen gültige Daten, wenn registriert wird, dann sofort eingeloggt auf /dashboard', async ({ page }) => {
+  test('Angenommen gültige Daten, wenn registriert wird, dann sofort eingeloggt auf /projects', async ({ page }) => {
     await fillRegister(page, uniqueEmail())
-    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15000 })
-    await expect(page.getByText('Willkommen')).toBeVisible()
+    await expect(page).toHaveURL(/\/projects$/, { timeout: 15000 })
+    await expect(page.getByText('Meine Projekte')).toBeVisible()
   })
 
   test('Angenommen registriert, wenn Logout → erneuter Login → Reload, dann bleibt die Session erhalten', async ({ page }) => {
     const email = uniqueEmail()
 
     await fillRegister(page, email)
-    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15000 })
+    await expect(page).toHaveURL(/\/projects$/, { timeout: 15000 })
 
     // Logout
     await page.getByRole('button', { name: 'Logout' }).click()
     await expect(page).toHaveURL(/\/login$/, { timeout: 15000 })
 
-    // Nach Logout ist /dashboard nicht mehr erreichbar
-    await page.goto('/dashboard')
+    // Nach Logout ist /projects nicht mehr erreichbar
+    await page.goto('/projects')
     await expect(page).toHaveURL(/\/login$/)
 
     // Erneuter Login
     await login(page, email)
-    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15000 })
+    await expect(page).toHaveURL(/\/projects$/, { timeout: 15000 })
 
     // Session bleibt über Reload bestehen
     await page.reload()
-    await expect(page).toHaveURL(/\/dashboard$/)
-    await expect(page.getByText('Willkommen')).toBeVisible()
+    await expect(page).toHaveURL(/\/projects$/)
+    await expect(page.getByText('Meine Projekte')).toBeVisible()
   })
 
-  test('Angenommen eingeloggt, wenn /login aufgerufen wird, dann Redirect zu /dashboard', async ({ page }) => {
+  test('Angenommen eingeloggt, wenn /login aufgerufen wird, dann Redirect zu /projects', async ({ page }) => {
     await fillRegister(page, uniqueEmail())
-    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15000 })
+    await expect(page).toHaveURL(/\/projects$/, { timeout: 15000 })
     await page.goto('/login')
-    await expect(page).toHaveURL(/\/dashboard$/)
+    await expect(page).toHaveURL(/\/projects$/)
   })
 
   test('Angenommen leeres Registrierungsformular, wenn abgeschickt, dann feldbezogene Fehler', async ({ page }) => {
@@ -111,7 +114,7 @@ test.describe('PROJ-2 Authentifizierung', () => {
   test('Angenommen E-Mail bereits registriert, wenn erneut registriert, dann neutrale Meldung', async ({ page }) => {
     const email = uniqueEmail()
     await fillRegister(page, email)
-    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15000 })
+    await expect(page).toHaveURL(/\/projects$/, { timeout: 15000 })
 
     // Logout, damit /register nicht durch die Middleware umgeleitet wird
     await page.getByRole('button', { name: 'Logout' }).click()

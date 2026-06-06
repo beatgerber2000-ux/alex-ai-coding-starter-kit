@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 1, // 1 Retry lokal: Supabase Free Tier hat gelegentlich Timing-Flakiness
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',
