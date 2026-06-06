@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 
@@ -23,9 +24,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <>
-      <Card className="group">
+      <Card className="group cursor-pointer hover:bg-accent transition-colors">
         <CardContent className="flex items-center justify-between p-4">
-          <span className="truncate font-medium">{project.name}</span>
+          <Link href={`/projects/${project.id}`} className="min-w-0 flex-1">
+            <span className="truncate font-medium">{project.name}</span>
+          </Link>
           <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
             <Button
               variant="ghost"

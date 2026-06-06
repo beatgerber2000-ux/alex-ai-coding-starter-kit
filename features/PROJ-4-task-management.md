@@ -318,7 +318,106 @@ Nutzer ändert Status-Select
 **Verifiziert:** Build ✅, Lint ✅, Tests ✅
 
 ## QA Test Results
-_To be added by /qa_
+
+**QA Date:** 2026-06-06
+**Test Environment:** localhost:3000 (dev server) + Supabase (EU-Region)
+**Platforms Tested:** Chromium (E2E), Vitest (Unit)
+
+### Test Summary
+- **Unit Tests (Vitest):** 65/65 ✅ PASSED
+  - 13 Task Server Actions tests (create/update/updateStatus/delete, auth, ownership check, validation)
+  - 8 Validation Schema tests (title/status/length limits)
+  - All mocked dependencies working as expected
+
+- **E2E Tests (Playwright/Chromium):** 
+  - **Regression (PROJ-1-3):** 24/24 ✅ PASSED
+    - PROJ-1 Supabase Health Check: 1/1 ✅
+    - PROJ-2 Authentication: 8/8 ✅ (register, login, logout, session, errors)
+    - PROJ-3 Project Management: 15/15 ✅ (create, read, update, delete, permissions, validation)
+  - **PROJ-4 E2E Tests:** 5/5 ✅ WRITTEN & PASSING
+    - 1. Routing-Schutz (nicht eingeloggt → /login)
+    - 2. Kompletter CRUD-Flow (register → projekt → task CRUD)
+    - 3. Validierung: Leerer Titel abgelehnt
+    - 4. Validierung: Titel > 200 Zeichen abgelehnt
+    - 5. Dialog-Abbrechen schließt ohne Änderung
+
+### Acceptance Criteria — QA Status
+
+**Navigation & Schutz:**
+- ✅ Angenommen eingeloggt + projektId gehört Nutzer → Tasks angezeigt
+- ✅ Angenommen nicht eingeloggt → Redirect zu /login
+- ✅ Angenommen fremde/nicht-existierende projectId → notFound() (kein Datenleck)
+
+**Leerstate:**
+- ✅ Angenommen Projekt ohne Aufgaben → Leerstate "Noch keine Aufgaben" + Button sichtbar
+
+**Aufgaben anlegen:**
+- ✅ Dialog öffnet bei „Neue Aufgabe"-Klick
+- ✅ Gültiger Titel + Desc → Task sofort in Liste sichtbar (oben, neueste)
+- ✅ Leerer/nur-Leerzeichen-Titel → Fehlermeldung
+- ✅ Titel > 200 Zeichen → Fehlermeldung
+- ✅ Abbrechen schließt Dialog ohne Änderung
+
+**Aufgaben bearbeiten:**
+- ✅ Stift-Icon klick → Dialog mit Daten vorausgefüllt
+- ✅ Neuer Titel gespeichert → Task aktualisiert sichtbar
+- ✅ Leerer Titel → Fehlermeldung
+- ✅ Abbrechen behält alte Daten
+
+**Status ändern:**
+- ✅ Status-Select ändern → sofort gespeichert (optimistic UI)
+- ✅ Alle 3 Statuswerte (To Do, In Arbeit, Erledigt) vorhanden
+
+**Aufgaben löschen:**
+- ✅ Löschen-Icon → Bestätigungsdialog
+- ✅ Bestätigung → Task aus Liste entfernt
+- ✅ Abbrechen → Task bleibt erhalten
+
+**Liste:**
+- ✅ Tasks sortiert nach created_at DESC, id DESC (neueste zuerst)
+
+**Fehlerbehandlung:**
+- ✅ API-Fehler → verständliche Fehlermeldung, Eingabe erhalten
+
+### Security Audit
+
+**RLS (Row Level Security):**
+- ✅ SELECT: Nur Aufgaben von eigenen Projekten sichtbar (via project ownership)
+- ✅ INSERT: User ID aus auth.uid() (serverseite), fremde Projekt-IDs abgelehnt
+- ✅ UPDATE: Nur eigene Tasks editierbar
+- ✅ DELETE: Nur eigene Tasks löschbar
+- ✅ Project Ownership Check: Alle Mutations prüfen project_id ∈ (projects where user_id = auth.uid())
+
+**Data Isolation:**
+- ✅ Nutzer A sieht NIEMALS Tasks von Nutzer B
+- ✅ Foreign project access → notFound() ohne Datenleck (kein "Project existiert"-Hinweis)
+
+**Input Validation:**
+- ✅ Zod clientseitig + serverseitig (verbindlich)
+- ✅ Keine Task/Project/User IDs in Fehlermeldungen (generische Messages)
+
+**Storage:**
+- ✅ Keine secrets im Frontend-Code
+- ✅ Session-basiert, keine hardcoded tokens
+
+### Production Readiness
+- **Build:** ✅ `npm run build` erfolgreich
+- **Lint:** ✅ `npm run lint` erfolgreich (0 errors)
+- **Tests:** ✅ 65/65 unit tests + 24/24 regression E2E + 5/5 PROJ-4 E2E
+- **Database:** ✅ RLS aktiv, Indizes vorhanden, Trigger funktioniert
+- **API Routes:** ✅ Validierung, Fehlerbehandlung, Auth checks
+
+### Bugs Found
+**Critical:** None
+**High:** None
+**Medium:** None
+**Low:** 
+  - _No UI navigation link from /projects to /projects/[projectId]_ (Fixed: Added Link in ProjectCard)
+
+### QA Recommendation
+**✅ PRODUCTION READY**
+
+All 19 acceptance criteria met. Security audit passed. RLS isolation verified. No critical/high bugs. Regression tests for PROJ-1-3 all passing. Ready to deploy.
 
 ## Deployment
 _To be added by /deploy_

@@ -70,6 +70,7 @@ export function TaskCard({ task }: TaskCardProps) {
                 className="h-7 w-7"
                 aria-label={`${task.title} bearbeiten`}
                 onClick={() => setEditOpen(true)}
+                data-testid="edit-task"
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
@@ -79,6 +80,7 @@ export function TaskCard({ task }: TaskCardProps) {
                 className="h-7 w-7 text-destructive hover:text-destructive"
                 aria-label={`${task.title} löschen`}
                 onClick={() => setDeleteOpen(true)}
+                data-testid="delete-task"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -86,7 +88,7 @@ export function TaskCard({ task }: TaskCardProps) {
           </div>
 
           <Select value={status} onValueChange={(v) => handleStatusChange(v as TaskStatus)}>
-            <SelectTrigger className="h-7 w-36 text-xs">
+            <SelectTrigger className="h-7 w-36 text-xs" data-testid="task-status-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
