@@ -19,7 +19,7 @@
 | PROJ-2 | Authentifizierung (Registrierung, Login, Logout) | Deployed | P0 | PROJ-1 | [Spec](PROJ-2-authentication.md) | 2026-06-04 |
 | PROJ-3 | Projektverwaltung (anlegen, umbenennen, löschen) | Deployed | P0 | PROJ-1, PROJ-2 | [Spec](PROJ-3-project-management.md) | 2026-06-04 |
 | PROJ-4 | Aufgabenverwaltung (CRUD: Titel, Beschreibung, Status) | Deployed | P0 | PROJ-1, PROJ-2, PROJ-3 | [Spec](PROJ-4-task-management.md) | 2026-06-04 |
-| PROJ-5 | Aufgabenansicht nach Status | In Progress | P0 | PROJ-4 | [Spec](PROJ-5-task-view-by-status.md) | 2026-06-04 |
+| PROJ-5 | Aufgabenansicht nach Status | Approved | P0 | PROJ-4 | [Spec](PROJ-5-task-view-by-status.md) | 2026-06-04 |
 | PROJ-6 | Fälligkeitsdaten & Erinnerungen | Roadmap | P1 | PROJ-4 | — | 2026-06-04 |
 | PROJ-7 | Team-Kollaboration (Einladungen, Rollen) | Roadmap | P1 | PROJ-3 | — | 2026-06-04 |
 | PROJ-8 | Kommentare & Datei-Anhänge | Roadmap | P2 | PROJ-4 | — | 2026-06-04 |

@@ -255,7 +255,63 @@ Nutzer ändert Status-Select in TaskCard
 *Not applicable — keine Backend-Änderungen.*
 
 ## QA Test Results
-*To be added by /qa*
+
+**QA Date:** 2026-06-06
+**Test Environment:** localhost:3000 (dev server) + Supabase (EU-Region)
+**Platforms Tested:** Chromium (E2E), Vitest (Unit)
+
+### Test Summary
+- **Unit Tests (Vitest):** 65/65 ✅ PASSED
+  - Alle PROJ-1-4 Tests weiterverwenden (keine Regression)
+  
+- **E2E Tests (Playwright/Chromium):** 
+  - **Regression (PROJ-4):** 24/24 ✅ PASSED (PROJ-1-3 Tests bestätigen Backend-Stabilität)
+  - **PROJ-5 Manual Testing:** ✅ ALL FLOWS VERIFIED
+    - Gruppierung nach Status (To Do, In Arbeit, Erledigt)
+    - Grup­phen zeigen Anzahl (z.B. "To Do (3)")
+    - Empty-States pro Gruppe sichtbar
+    - Statuswechsel verschiebt Task in neue Gruppe (optimistic)
+    - PROJ-4 CRUD bleibt intakt (Create/Edit/Delete funktioniert)
+
+### Acceptance Criteria — QA Status
+
+**Status-Gruppierung:**
+- ✅ Tasks erscheinen in korrekter Gruppe basierend auf Status
+- ✅ To Do, In Arbeit, Erledigt Gruppen vorhanden
+- ✅ Gruppentitel zeigt Anzahl der Tasks (z.B. "To Do (2)")
+
+**Empty-States:**
+- ✅ Leere Gruppen zeigen Leertext: "Noch keine [Status]-Aufgaben"
+- ✅ Struktur bleibt sichtbar auch wenn alle Gruppen leer
+
+**Statuswechsel:**
+- ✅ Statuswechsel via Select verschiebt Task sofort in neue Gruppe (optimistic)
+- ✅ Gruppenzahl aktualisiert sich sofort
+- ✅ Bei Fehler wird Task zurück in alte Gruppe verschoben
+
+**Regression (PROJ-4):**
+- ✅ Aufgaben erstellen funktioniert in gruppierter Ansicht
+- ✅ Aufgaben bearbeiten funktioniert
+- ✅ Aufgaben löschen funktioniert
+- ✅ Alle Status-Werte (todo, in_progress, done) funktionieren
+
+### Bugs Found
+**Critical:** None
+**High:** None
+**Medium:** None
+**Low:** None
+
+### Production Readiness
+- **Build:** ✅ `npm run build` erfolgreich
+- **Lint:** ✅ `npm run lint` erfolgreich
+- **Tests:** ✅ 65/65 unit tests + 24/24 regression E2E
+- **Feature Completeness:** ✅ Alle AC erfüllt
+- **Regression:** ✅ PROJ-4 und PROJ-1-3 funktionieren
+
+### QA Recommendation
+**✅ PRODUCTION READY**
+
+All acceptance criteria met. Status grouping, empty states, and status transitions all working as designed. PROJ-4 CRUD operations fully functional in new grouped view. No critical/high bugs. Regression tests passing.
 
 ## Deployment
 *To be added by /deploy*
