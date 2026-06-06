@@ -221,7 +221,35 @@ Nutzer ändert Status-Select in TaskCard
 - `shadcn/ui` — schon vorhanden (Card, Button)
 
 ## Implementation Notes (Frontend)
-*To be added by /frontend*
+
+**Implementiert am:** 2026-06-06
+
+**Was gebaut wurde:**
+- `src/components/tasks/task-list-by-status.tsx` — Neue Komponente für gruppierte Aufgabenliste
+  - Input: `projectId` + `tasks: Task[]` (ungruppiert von Server)
+  - Gruppiert Tasks nach Status: todo, in_progress, done
+  - Zeigt Überschrift pro Gruppe mit Anzahl: "To Do (5)"
+  - Empty-State pro Gruppe: "Noch keine To-Do-Aufgaben"
+  - Nutzt bestehende TaskCard-Komponente für jede Aufgabe
+  - Kein neuer State, keine neue Logik — reine UI-Transformation
+
+- `src/app/projects/[projectId]/page.tsx` — Angepasst
+  - Import: TaskList → TaskListByStatus
+  - Ersetzt flache TaskList durch TaskListByStatus
+  - Zeigt Projekt-Level Empty-State wenn keine Tasks existieren
+  - CreateTaskDialog bleibt unverändert
+
+**Wiederverwendung:**
+- TaskCard — unverändert (Status-Select, Icons, Optimistic Update funktioniert wie bisher)
+- updateTaskStatus Action — unverändert (Task bewegt sich in neue Gruppe nach Status-Änderung)
+- Validation, RLS, Security — unverändert
+
+**Keine neuen Dependencies:**
+- Tailwind CSS — schon vorhanden
+- shadcn/ui — schon vorhanden
+- React hooks — schon vorhanden
+
+**Verifiziert:** `npm run build` ✅, `npm run lint` ✅, `npm test` 65/65 ✅
 
 ## Implementation Notes (Backend)
 *Not applicable — keine Backend-Änderungen.*

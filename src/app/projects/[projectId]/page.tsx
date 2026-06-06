@@ -7,7 +7,7 @@ import { signOut } from '@/app/auth/actions'
 import { type TaskStatus } from '@/lib/tasks/validation'
 import { Button } from '@/components/ui/button'
 import { CreateTaskDialog } from '@/components/tasks/create-task-dialog'
-import { TaskList } from '@/components/tasks/task-list'
+import { TaskListByStatus } from '@/components/tasks/task-list-by-status'
 
 interface Props {
   params: Promise<{ projectId: string }>
@@ -62,10 +62,17 @@ export default async function ProjectDetailPage({ params }: Props) {
       <div className="mx-auto max-w-2xl space-y-4 p-4">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">Aufgaben</h1>
-          {(tasks ?? []).length > 0 && <CreateTaskDialog projectId={projectId} />}
+          <CreateTaskDialog projectId={projectId} />
         </div>
 
-        <TaskList projectId={projectId} tasks={tasks ?? []} />
+        {(tasks ?? []).length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">Noch keine Aufgaben</p>
+            <p className="text-sm text-muted-foreground">Erstelle deine erste Aufgabe, um zu starten.</p>
+          </div>
+        ) : (
+          <TaskListByStatus projectId={projectId} tasks={tasks ?? []} />
+        )}
       </div>
     </main>
   )
