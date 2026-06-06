@@ -1,6 +1,6 @@
 # PROJ-4: Aufgabenverwaltung (CRUD: Titel, Beschreibung, Status)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-06-06
 **Last Updated:** 2026-06-06
 
@@ -292,6 +292,30 @@ Nutzer ändert Status-Select
 - `tasks`-Tabelle anlegen (SQL: CHECK-Constraint status, `updated_at`-Trigger, RLS via Projektbesitz, Index)
 - Echte createTask/updateTask/updateTaskStatus/deleteTask-Logik (user_id aus Session, Eigentumscheck)
 - Aufgaben laden in `/projects/[projectId]/page.tsx` (aktuell leeres Array-Platzhalter)
+
+## Implementation Notes (Backend)
+**Implementiert am:** 2026-06-06
+
+**SQL (Supabase):**
+- Tabelle `tasks` mit CHECK-Constraint für status, ON DELETE CASCADE für projectId/userId, RLS via Projektbesitz
+- `updated_at`-Trigger automatisch bei UPDATE
+- Indizes auf project_id und user_id
+
+**Server Actions (src/app/tasks/actions.ts):**
+- `createTask`/`updateTask`/`updateTaskStatus`/`deleteTask` mit echter Supabase-Logik
+- Projektbesitz-Check vor jeder Mutation (RLS-Sicherheit)
+- Serverseitige Zod-Validierung
+- Keine Daten-IDs in Fehlermeldungen
+
+**Projektdetailseite (src/app/projects/[projectId]/page.tsx):**
+- Echte Aufgaben-Abfrage (ORDER BY created_at DESC, id DESC)
+- RLS schützt automatisch
+
+**Tests (65/65 Vitest):**
+- 13 Task-Action-Tests (create/update/updateStatus/delete, Auth, Eigentumscheck, Validierung)
+- 8 Validation-Tests (Titel/Status, Längenlimits)
+
+**Verifiziert:** Build ✅, Lint ✅, Tests ✅
 
 ## QA Test Results
 _To be added by /qa_

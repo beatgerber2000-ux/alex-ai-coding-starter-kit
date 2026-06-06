@@ -30,8 +30,13 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   if (!project) notFound()
 
-  // Aufgaben laden (Platzhalter-Array bis /backend die Tabelle anlegt).
-  const tasks: { id: string; project_id: string; title: string; description?: string | null; status: TaskStatus }[] = []
+  // Aufgaben laden (RLS stellt sicher nur eigene Aufgaben)
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select('id, project_id, title, description, status')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
 
   return (
     <main className="min-h-screen bg-muted/30">
@@ -57,10 +62,10 @@ export default async function ProjectDetailPage({ params }: Props) {
       <div className="mx-auto max-w-2xl space-y-4 p-4">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">Aufgaben</h1>
-          {tasks.length > 0 && <CreateTaskDialog projectId={projectId} />}
+          {(tasks ?? []).length > 0 && <CreateTaskDialog projectId={projectId} />}
         </div>
 
-        <TaskList projectId={projectId} tasks={tasks} />
+        <TaskList projectId={projectId} tasks={tasks ?? []} />
       </div>
     </main>
   )
