@@ -420,4 +420,17 @@ Nutzer ändert Status-Select
 All 19 acceptance criteria met. Security audit passed. RLS isolation verified. No critical/high bugs. Regression tests for PROJ-1-3 all passing. Ready to deploy.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-06-06
+**Environment:** Vercel (Global CDN)
+**Production URL:** https://alex-ai-coding-starter-kit.vercel.app
+**Database:** Supabase (EU-Region)
+
+**Commits included:**
+- 59145bc: Write feature specification for Project Management
+- 63ac9d0: Add technical design for Task Management
+- 16921e2: Implement frontend for Task Management
+- 99069ff: Implement backend for Task Management
+- 253a797: Add QA test results for Task Management
+
+**Deployment Status:** ✅ **LIVE**
