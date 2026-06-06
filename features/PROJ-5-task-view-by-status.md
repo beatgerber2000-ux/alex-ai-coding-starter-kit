@@ -314,4 +314,16 @@ Nutzer ändert Status-Select in TaskCard
 All acceptance criteria met. Status grouping, empty states, and status transitions all working as designed. PROJ-4 CRUD operations fully functional in new grouped view. No critical/high bugs. Regression tests passing.
 
 ## Deployment
-*To be added by /deploy*
+
+**Deployed:** 2026-06-06
+**Environment:** Vercel (Global CDN)
+**Production URL:** https://alex-ai-coding-starter-kit.vercel.app
+**Database:** Supabase (EU-Region)
+
+**Commits included:**
+- fbdd492: Write feature specification for Task View by Status
+- 01bd5ca: Add technical design for Task View by Status
+- 9cbd12d: Implement frontend for Task View by Status
+- 08c1155: Add QA test results for Task View by Status
+
+**Deployment Status:** ✅ **LIVE**
