@@ -8,17 +8,15 @@ import { ProjectList } from '@/components/projects/project-list'
 
 export default async function ProjectsPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/login')
-  }
+  if (!user) redirect('/login')
 
-  // Projekte des eingeloggten Nutzers laden (RLS stellt sicher, nur eigene)
-  // Echte DB-Abfrage kommt mit /backend; hier Platzhalter-Array bis dahin.
-  const projects: { id: string; name: string }[] = []
+  // RLS stellt sicher, dass nur eigene Projekte zurückgegeben werden.
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('id, name')
+    .order('created_at', { ascending: false })
 
   return (
     <main className="min-h-screen bg-muted/30">
@@ -36,13 +34,13 @@ export default async function ProjectsPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-2xl p-4 space-y-4">
+      <div className="mx-auto max-w-2xl space-y-4 p-4">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">Projekte</h1>
-          {projects.length > 0 && <CreateProjectDialog />}
+          {(projects?.length ?? 0) > 0 && <CreateProjectDialog />}
         </div>
 
-        <ProjectList projects={projects} />
+        <ProjectList projects={projects ?? []} />
       </div>
     </main>
   )

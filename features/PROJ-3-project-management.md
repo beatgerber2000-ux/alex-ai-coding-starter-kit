@@ -247,6 +247,30 @@ Tabelle `projects` + RLS-Policies + Index auf `user_id` über den Supabase SQL-E
 - createProject/renameProject/deleteProject: Supabase-Logik, user_id aus Session, Eigentumscheck, revalidatePath
 - Projekte laden in `projects/page.tsx` (aktuell leeres Array-Platzhalter)
 
+## Implementation Notes (Backend)
+**Implementiert am:** 2026-06-06
+
+**Manueller Schritt (erledigt):** Tabelle `projects` + RLS-Policies (SELECT/INSERT/UPDATE/DELETE) + Index `idx_projects_user_id` via Supabase SQL-Editor angelegt.
+
+**Was gebaut wurde:**
+- `src/app/projects/actions.ts` — echte Server Actions mit Supabase:
+  - `createProject`: Zod-Validierung → `user_id` aus Session → INSERT
+  - `renameProject`: Zod-Validierung → Eigentumscheck via `.eq('user_id', user.id)` + `.select('id')` → UPDATE; kein Match → GENERIC_ERROR
+  - `deleteProject`: Eigentumscheck via `.eq('user_id', user.id)` → DELETE; doppeltes Löschen schlägt lautlos fehl (kein Error)
+  - `revalidatePath('/projects')` nach jeder erfolgreichen Mutation
+  - Keine Projekt-IDs/user_ids in Fehlermeldungen
+- `src/app/projects/page.tsx` — echte DB-Abfrage: `.from('projects').select('id, name').order('created_at', { ascending: false })`; RLS filtert automatisch auf eigene Projekte
+- `src/app/auth/actions.test.ts` — Tests auf `/projects`-Redirect aktualisiert (PROJ-3-Routing-Änderung)
+
+**Tests:**
+- `src/lib/projects/validation.test.ts` — 6 Tests (gültig, trim, leer, nur-Leerzeichen, genau 100, >100)
+- `src/app/projects/actions.test.ts` — 13 Tests (create/rename/delete: Erfolg, Auth-Fehler, DB-Fehler, Validierung, user_id-Sicherheit, Doppel-Löschen)
+
+**Verifiziert:**
+- `npm test` → **41/41 grün** (inkl. PROJ-1/2/3)
+- `npm run build` → grün
+- `npm run lint` → grün
+
 ## QA Test Results
 _To be added by /qa_
 

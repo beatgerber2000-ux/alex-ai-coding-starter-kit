@@ -36,11 +36,11 @@ beforeEach(() => {
 })
 
 describe('signIn', () => {
-  it('loggt bei korrekten Daten ein und leitet nach /dashboard weiter', async () => {
+  it('loggt bei korrekten Daten ein und leitet nach /projects weiter', async () => {
     signInWithPassword.mockResolvedValue({ error: null })
     await signIn({ email: 'a@b.com', password: 'secret123' })
     expect(signInWithPassword).toHaveBeenCalledOnce()
-    expect(redirect).toHaveBeenCalledWith('/dashboard')
+    expect(redirect).toHaveBeenCalledWith('/projects')
   })
 
   it('gibt generischen Fehler bei falscher Kombination zurück, kein Redirect', async () => {
@@ -61,11 +61,11 @@ describe('signIn', () => {
 describe('signUp', () => {
   const valid = { email: 'a@b.com', password: 'supersecret', confirmPassword: 'supersecret' }
 
-  it('registriert bei Erfolg (Session vorhanden) und leitet nach /dashboard weiter', async () => {
+  it('registriert bei Erfolg (Session vorhanden) und leitet nach /projects weiter', async () => {
     signUp.mockResolvedValue({ data: { session: { access_token: 'x' }, user: { id: '1' } }, error: null })
     await signUpAction(valid)
     expect(signUp).toHaveBeenCalledOnce()
-    expect(redirect).toHaveBeenCalledWith('/dashboard')
+    expect(redirect).toHaveBeenCalledWith('/projects')
   })
 
   it('gibt neutrale Meldung bei bereits registrierter E-Mail (Fehler) zurück', async () => {
