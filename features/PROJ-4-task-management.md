@@ -146,12 +146,132 @@ Sicherheit:
 | project_id-Eigentumscheck bei allen Mutationen | Verhindert Cross-Project-Manipulation; user_id allein reicht nicht | 2026-06-06 |
 
 ### Technical Decisions
-_To be added by /architecture_
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| **Server Actions** für alle Task-Mutationen | Konsistent mit PROJ-3-Pattern; kein API-Endpoint nötig | 2026-06-06 |
+| **Optimistic Update** für Statusänderung | Häufige Aktion → sofortige UX ohne Ladezeit; Fehler werden zurückgesetzt | 2026-06-06 |
+| **Zod-Schema geteilt** (Client + Server) | Gleiche Trim/Längen-Regeln für UX-Feedback und verbindliche Prüfung | 2026-06-06 |
+| **Status als DB-CHECK-Constraint** (`todo`/`in_progress`/`done`) | Verhindert ungültige Statuswerte direkt in der DB — unabhängig von App-Logik | 2026-06-06 |
+| **`updated_at` via DB-Trigger** automatisch aktualisieren | Konsistent mit `projects`-Tabelle; kein manuelles Setzen in App-Code nötig | 2026-06-06 |
+| **RLS über Projektbesitz** (project_id → projects.user_id = auth.uid()) | `auth.uid() = user_id` allein reicht nicht; project_id muss nachweislich zum eingeloggten Nutzer gehören | 2026-06-06 |
+| **project-Eigentumscheck** in Server Actions vor jeder Mutation | Defense-in-Depth zusätzlich zu RLS; keine project_id/task_id/user_id in Fehlermeldungen | 2026-06-06 |
+| **Not-found-Behandlung** (`notFound()`) für fremde projectId | Kein Datenleck; Next.js liefert neutrale 404-Seite ohne Hinweis auf Existenz | 2026-06-06 |
+| **Keine neuen Pakete** | Alle Abhängigkeiten bereits im Stack (supabase/ssr, zod, react-hook-form, shadcn) | 2026-06-06 |
 
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### A) Struktur (Seiten & Bausteine)
+
+```
+src/app/projects/[projectId]/
+└── page.tsx                  Projektdetailseite: lädt Projekt + Aufgaben,
+                              Page-Guard (getUser + Projektzugehörigkeit),
+                              fremde/nicht-existierende projectId → notFound()
+
+src/app/tasks/actions.ts      Server Actions: createTask, updateTask,
+                              updateTaskStatus, deleteTask
+                              (Zod, user_id aus Session, project-Eigentumscheck)
+
+src/lib/tasks/validation.ts   Zod-Schemas (Titel + Beschreibung),
+                              geteilt von Client + Server
+
+src/components/tasks/
+├── task-list.tsx             Aufgabenliste (created_at DESC, id DESC) + Leerstate
+├── task-card.tsx             Karte: Titel, Beschreibung (ggf. gekürzt), Status-Select
+│                             (optimistic), Stift- + Löschen-Icon
+├── create-task-dialog.tsx    Dialog: Titel (Pflicht) + Beschreibung (optional)
+├── edit-task-dialog.tsx      Dialog: vorausgefüllter Titel + Beschreibung
+└── delete-task-dialog.tsx    AlertDialog mit Bestätigung
+```
+
+Seitenaufbau `/projects/[projectId]`:
+```
+/projects/[projectId] (Server Component, Page-Guard)
+├── Header: Projektname + „Neue Aufgabe"-Button + Zurück-Link zu /projects
+├── TaskList
+│   ├── TaskCard (je Aufgabe)
+│   │   ├── Titel
+│   │   ├── Beschreibung (optional, ggf. 2 Zeilen gekürzt)
+│   │   ├── Status-Select (Optimistic Update)
+│   │   ├── Stift-Icon → EditTaskDialog
+│   │   └── Löschen-Icon → DeleteTaskDialog
+│   └── Leerstate (wenn keine Aufgaben vorhanden)
+└── CreateTaskDialog
+```
+
+### B) Datenmodell
+
+```
+Tabelle: tasks (in Supabase anzulegen)
+- id            UUID, Primärschlüssel, auto-generiert
+- project_id    UUID, FK → projects(id) ON DELETE CASCADE
+- user_id       UUID, FK → auth.users(id) ON DELETE CASCADE
+                → NIEMALS vom Client; ausschließlich aus auth.uid()
+- title         Text, Pflicht, 1–200 Zeichen (getrimmt)
+- description   Text, nullable; nur-Leerzeichen → als null speichern
+- status        Text, CHECK IN ('todo', 'in_progress', 'done'), DEFAULT 'todo'
+                → DB-Constraint verhindert ungültige Werte unabhängig von App-Logik
+- created_at    Zeitstempel, DEFAULT now()
+- updated_at    Zeitstempel, DEFAULT now()
+                → automatisch via DB-Trigger bei jedem UPDATE aktualisiert
+
+Indizes:
+  idx_tasks_project_id  ON tasks(project_id)           Hauptabfrage-Index
+  (Optional)            ON tasks(project_id, user_id)  für Eigentumscheck-Joins
+
+Sortierung: created_at DESC, id DESC (stabiler Tie-Breaker)
+```
+
+### C) RLS (alle 4 Operationen)
+
+Die RLS-Policies sichern Tasks **über Projektbesitz** ab — nicht nur über `user_id` in der tasks-Tabelle:
+
+```
+SELECT/INSERT/UPDATE/DELETE auf tasks:
+  → Prüfung: Die task.project_id muss zu einem Projekt gehören,
+    dessen user_id = auth.uid() ist.
+  Kurz: auth.uid() = (SELECT user_id FROM projects WHERE id = task.project_id)
+
+Warum nicht einfach tasks.user_id = auth.uid()?
+→ Eine manipulierte project_id oder inkonsistente user_id könnte zu
+  fremden Projektbezügen führen. Der Projektbesitz ist die verlässlichere Quelle.
+```
+
+### D) Eigentumscheck in Server Actions (Defense-in-Depth)
+
+```
+Alle Mutationen (create/update/updateStatus/delete):
+1. user_id aus auth.uid() (nie vom Client)
+2. project_id aus URL-Parameter
+3. Prüfung: SELECT projects WHERE id = projectId AND user_id = auth.uid()
+   → Gehört das Projekt dem Nutzer? → Nur dann weiter
+4. Mutation ausführen
+5. Fehlermeldungen: keine project_id, task_id oder user_id preisgeben
+```
+
+### E) Optimistic Status-Update
+
+```
+Nutzer ändert Status-Select
+   │
+   ├── UI: Status im Client sofort aktualisiert (useState im TaskCard)
+   └── updateTaskStatus() Server Action läuft im Hintergrund
+         ├── Erfolg → revalidatePath (Server-State in Sync)
+         └── Fehler → Status im Client zurücksetzen + Fehlermeldung
+```
+
+### F) Abhängigkeiten
+
+**Keine neuen Pakete** — alle vorhanden:
+- `@supabase/ssr`, `@supabase/supabase-js`, `zod`, `react-hook-form`, `@hookform/resolvers`
+- shadcn `Dialog`, `AlertDialog`, `Select`, `Input`, `Textarea`, `Button`, `Card` — alle installiert
+
+**Manueller Schritt in Supabase (vor `/backend`):**
+- Tabelle `tasks` + CHECK-Constraint für `status` + RLS über Projektbesitz
+- `updated_at`-Trigger (analog zu `projects`, falls dort einer existiert, sonst neu anlegen)
+- Index auf `project_id`
 
 ## QA Test Results
 _To be added by /qa_
