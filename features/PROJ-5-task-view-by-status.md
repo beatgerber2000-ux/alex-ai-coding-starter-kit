@@ -136,15 +136,89 @@ Keine neuen Tabellen. Bestehende `tasks`-Tabelle wird nach `status` gruppiert:
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| **Neue Komponente `TaskListByStatus`** | Gruppierung-Logik separiert von PROJ-4-`TaskList` | 2026-06-06 |
-| **Bestehende TaskCard & Actions unverändert** | Validierung, Optimistic UI, RLS-Check wiederverwenden | 2026-06-06 |
-| **Keine neue Server Action** | updateTaskStatus von PROJ-4 reicht; Gruppierung ist reine UI-Anpassung | 2026-06-06 |
-| **RLS unverändert** | Alle PROJ-4-Security-Policies bleiben aktiv; nur UI-Filter ändert sich | 2026-06-06 |
+| **Client-seitige Gruppierung (kein neuer Backend-Query)** | Tasks sind bereits da (PROJ-4). Gruppierung ist reine UI-Transformation; keine DB-Änderung. | 2026-06-06 |
+| **Neue Komponente `TaskListByStatus`** | Gruppierungs-Logik separiert von PROJ-4-`TaskList`; Frontend sauberer, Wiederverwendung klarer. | 2026-06-06 |
+| **Bestehende TaskCard & Status-Select wiederverwenden** | Validierung, Error-Handling, Optimistic Update schon vorhanden; keine Duplikation. | 2026-06-06 |
+| **Optimistic UI: sofort verschieben + Rollback bei Fehler** | Schnelle UX für häufige Aktion (Status-Wechsel). Fehler-Recovery: Task zurück in alte Gruppe + Error-Message. | 2026-06-06 |
+| **Keine neue Server Action** | updateTaskStatus (PROJ-4) reicht; Task wandert nur in neue Gruppe nach Status-Änderung. | 2026-06-06 |
+| **Keine neue Route** | /projects/[projectId] zeigt Gruppen statt flache Liste; gleiches Ziel, andere Präsentation. | 2026-06-06 |
+| **Leerstate pro Gruppe sichtbar** | Struktur bleibt sichtbar auch wenn leer; User sieht, dass Kategorie existiert. | 2026-06-06 |
+| **RLS unverändert** | Alle PROJ-4-Security-Policies bleiben aktiv; Gruppierung ist reine UI-Anpassung. | 2026-06-06 |
+| **Keine neuen Dependencies** | Tailwind + shadcn/ui schon vorhanden; keine neuen Packages nötig. | 2026-06-06 |
 
 ---
 
 ## Tech Design (Solution Architect)
-*To be added by /architecture*
+
+### A) Component Structure
+
+```
+/projects/[projectId] (Server Component, unverändert)
+├── Header (Projektname, Buttons, Logout) — unverändert
+├── TaskListByStatus (NEU — ersetzt bestehende TaskList)
+│   ├── Status-Group: "To Do (Count)"
+│   │   ├── TaskCard (wiederverwendet aus PROJ-4)
+│   │   ├── TaskCard
+│   │   └── ...
+│   ├── Status-Group: "In Arbeit (Count)"
+│   │   ├── TaskCard
+│   │   └── ...
+│   ├── Status-Group: "Erledigt (Count)"
+│   │   ├── TaskCard, falls vorhanden
+│   │   └── Leerstate: "Noch keine erledigten Aufgaben" (falls leer)
+│   └── CreateTaskDialog (unverändert)
+```
+
+### B) Data Model
+
+**Keine neue Tabelle.** Bestehende `tasks`-Tabelle wird client-seitig verarbeitet:
+
+```
+Tasks vom Server (gleich wie PROJ-4):
+- id, project_id, user_id
+- title, description, status (todo | in_progress | done)
+- created_at, updated_at
+
+Grouping (Client-seitig, nicht persistent):
+1. Alle Tasks von Supabase laden
+2. Nach status gruppieren: todo → "To Do", in_progress → "In Arbeit", done → "Erledigt"
+3. Innerhalb Gruppe: sortieren nach created_at DESC, id DESC
+4. Leerstate anzeigen, wenn Gruppe leer
+```
+
+### C) Optimistic UI — Status-Wechsel
+
+```
+Nutzer ändert Status-Select in TaskCard
+   │
+   ├── UI: Task wird sofort in neue Status-Gruppe verschoben (optimistic)
+   └── updateTaskStatus() Server Action läuft async
+         ├── Erfolg → revalidatePath (Server-State in Sync)
+         │          Neue Gruppe bleibt bestehen
+         └── Fehler → Task wird zurück in alte Status-Gruppe verschoben
+                     Error-Message angezeigt
+```
+
+### D) Tech Decisions — Begründung
+
+| Decision | Why | Date |
+|----------|-----|------|
+| **Client-seitige Gruppierung statt neue Query** | Tasks sind bereits vom Server da (PROJ-4-Query). Gruppierung ist reine UI-Transformation; keine DB-Änderung nötig. | 2026-06-06 |
+| **Bestehende TaskCard & Status-Select wiederverwenden** | Alle Validierung, Error-Handling, Optimistic Update funktionieren bereits. Keine Duplikation oder neue Logik nötig. | 2026-06-06 |
+| **Keine neue Server Action** | updateTaskStatus (PROJ-4) reicht aus. Task bewegt sich nur in neue Gruppe nach Status-Änderung. | 2026-06-06 |
+| **Optimistic UI: sofort verschieben + bei Fehler zurücksetzen** | Schnelle UX für häufige Aktion (Status-Änderung). Fehler-Recovery via Rollback ist robust. | 2026-06-06 |
+| **Keine neue Route** | /projects/[projectId] zeigt Gruppen statt flache Liste. Gleiches Ziel, andere Präsentation. | 2026-06-06 |
+| **Leerstate pro Gruppe sichtbar** | Struktur bleibt sichtbar auch wenn leer. User sieht, dass Kategorie existiert, ist aber leer. | 2026-06-06 |
+| **Neue Komponente `TaskListByStatus`** | Gruppierungs-Logik separiert von PROJ-4-`TaskList`. Macht Frontend sauberer. | 2026-06-06 |
+| **Keine neuen Dependencies** | Tailwind CSS + shadcn/ui schon vorhanden. Keine neuen Packages nötig. | 2026-06-06 |
+
+### E) Dependencies
+
+**Keine neuen Packages:**
+- `@supabase/ssr`, `@supabase/supabase-js` — schon für PROJ-4 vorhanden
+- `react-hook-form`, `@hookform/resolvers` — schon für PROJ-4 vorhanden
+- `tailwindcss` — schon vorhanden
+- `shadcn/ui` — schon vorhanden (Card, Button)
 
 ## Implementation Notes (Frontend)
 *To be added by /frontend*
