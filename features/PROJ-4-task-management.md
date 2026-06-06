@@ -1,6 +1,6 @@
 # PROJ-4: Aufgabenverwaltung (CRUD: Titel, Beschreibung, Status)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-06-06
 **Last Updated:** 2026-06-06
 
@@ -272,6 +272,26 @@ Nutzer ändert Status-Select
 - Tabelle `tasks` + CHECK-Constraint für `status` + RLS über Projektbesitz
 - `updated_at`-Trigger (analog zu `projects`, falls dort einer existiert, sonst neu anlegen)
 - Index auf `project_id`
+
+## Implementation Notes (Frontend)
+**Implementiert am:** 2026-06-06
+
+**Was gebaut wurde (UI + Client-Validierung):**
+- `src/lib/tasks/validation.ts` — Zod-Schemas: `taskSchema` (Titel 1–200, Beschreibung 0–1000), `taskStatusSchema` (`todo`/`in_progress`/`done`); `STATUS_LABELS` für Anzeigetexte; `TaskFormValues` (für react-hook-form) + `TaskInput` (für Server Actions) getrennt.
+- `src/app/tasks/actions.ts` — typisierter Seam: `createTask`/`updateTask`/`updateTaskStatus`/`deleteTask` (Platzhalter für /backend).
+- `src/components/tasks/create-task-dialog.tsx` — Dialog mit Titel (Pflicht) + Beschreibung (optional, Textarea).
+- `src/components/tasks/edit-task-dialog.tsx` — Dialog vorausgefüllt, useEffect-Reset ohne setState im Effect.
+- `src/components/tasks/delete-task-dialog.tsx` — AlertDialog mit Bestätigungstext.
+- `src/components/tasks/task-card.tsx` — Karte mit Optimistic Status-Update (useState + Rollback bei Fehler), Stift/Trash-Icons (hover-visible), Status-Select.
+- `src/components/tasks/task-list.tsx` — Liste + Leerstate mit „Erste Aufgabe anlegen"-Button.
+- `src/app/projects/[projectId]/page.tsx` — Platzhalterseite ersetzt: Projekt via Supabase geladen, `notFound()` für fremde/nicht-existierende `projectId`, Header mit Zurück-Link, Aufgabenliste als leeres Array bis /backend.
+
+**Verifiziert:** `npm run build` grün, `npm run lint` grün.
+
+**Bewusst dem Backend überlassen (/backend):**
+- `tasks`-Tabelle anlegen (SQL: CHECK-Constraint status, `updated_at`-Trigger, RLS via Projektbesitz, Index)
+- Echte createTask/updateTask/updateTaskStatus/deleteTask-Logik (user_id aus Session, Eigentumscheck)
+- Aufgaben laden in `/projects/[projectId]/page.tsx` (aktuell leeres Array-Platzhalter)
 
 ## QA Test Results
 _To be added by /qa_
