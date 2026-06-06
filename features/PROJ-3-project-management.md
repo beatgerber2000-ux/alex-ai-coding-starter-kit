@@ -1,6 +1,6 @@
 # PROJ-3: Projektverwaltung (anlegen, umbenennen, löschen)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-05
 **Last Updated:** 2026-06-05
 
@@ -331,4 +331,25 @@ Tabelle `projects` + RLS-Policies + Index auf `user_id` über den Supabase SQL-E
 - **[Hinweis] Test-Nutzer und -Projekte:** E2E legt echte Supabase-Einträge an (`qa-*@example.com`, `qa-proj-*`). Periodisches Aufräumen empfohlen.
 
 ## Deployment
-_To be added by /deploy_
+**Deployed am:** 2026-06-06 · **Plattform:** Vercel (Auto-Deploy via GitHub-Push)
+
+- **Production-URL:** https://alex-ai-coding-starter-kit.vercel.app
+- **Projektverwaltung:** `/projects` (geschützt)
+- **Git-Tag:** `v1.2.0-PROJ-3`
+
+### Pre-Deployment-Checks
+- ✅ `npm run build` lokal erfolgreich
+- ✅ `npm run lint` grün
+- ✅ QA approved, 18/18 AC, 0 Critical/High-Bugs
+- ✅ Supabase-Tabelle `projects` + RLS-Policies angelegt (manuell)
+- ✅ Env-Variablen in Vercel gesetzt (aus PROJ-1, unverändert)
+- ✅ Keine Secrets committet
+
+### Production-Verifikation (live, echter Browser)
+- ✅ Routing: `/projects` → `/login` (unauth); `/dashboard` → `/projects` (auth)
+- ✅ `/api/health/supabase` → `connected` (unverändert)
+- ✅ Security-Header auf allen Routen gesetzt
+- ✅ Registrierung → sofort auf `/projects`, Leerstate sichtbar
+- ✅ Projekt anlegen → erscheint in Liste
+- ✅ Projekt umbenennen → Name aktualisiert
+- ✅ Projekt löschen → entfernt, Leerstate erscheint wieder
